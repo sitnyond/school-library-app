@@ -163,7 +163,7 @@ function LoginForm() {
   return (
     <Container maxWidth="sm" sx={{ mt: 10 }}>
       <Paper sx={{ p: 4, elevation: 3, textAlign: 'center' }}>
-        <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}>Školní knihovna 📚</Typography>
+        <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}>School library 📚</Typography>
         
         {isResetMode ? (
           <>
@@ -305,7 +305,7 @@ function LibraryManager() {
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h3" component="h1" color="primary" sx={{ fontWeight: 'bold' }}>Školní knihovna 📚</Typography>
+        <Typography variant="h3" component="h1" color="primary" sx={{ fontWeight: 'bold' }}>School library 📚</Typography>
         <Stack direction="row" spacing={2}>
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAdd}>Přidat knihu</Button>
           <Button variant="outlined" color="inherit" startIcon={<LogoutIcon />} onClick={() => supabase.auth.signOut()}>Odhlásit</Button>
