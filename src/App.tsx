@@ -5,7 +5,7 @@ import { csCZ as coreCsCZ } from '@mui/material/locale'
 import { 
   Container, Typography, TextField, Button, Box, Paper, MenuItem, Stack, 
   CssBaseline, ThemeProvider, createTheme, Dialog, DialogTitle, 
-  DialogContent, DialogActions, IconButton, Autocomplete 
+  DialogContent, DialogActions, IconButton, Autocomplete, Link
 } from '@mui/material'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import DeleteIcon from '@mui/icons-material/Delete'
@@ -13,7 +13,6 @@ import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
 import LogoutIcon from '@mui/icons-material/Logout'
 
-// --- MODERNÍ NÁHRADA ZA ENUMY (řeší chybu 1294) ---
 export const BookType = {
   FICTION_1: 'fiction_1',
   FICTION_2: 'fiction_2',
@@ -37,13 +36,12 @@ export const Placement = {
   R5: 'R5'
 } as const
 export type Placement = typeof Placement[keyof typeof Placement]
-// --------------------------------------------------
 
 interface Book {
   id: string
   title: string
-  author: string
-  publisher: string
+  author: string | null
+  publisher: string | null
   type: BookType
   quantity: number
   placement: Placement | string 
@@ -56,6 +54,7 @@ const theme = createTheme({
 export default function App() {
   const [session, setSession] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [recoveryMode, setRecoveryMode] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -63,8 +62,12 @@ export default function App() {
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
+      // Záchyt speciálního eventu, kdy se uživatel vrací přes link z e-mailu
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryMode(true)
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -75,42 +78,46 @@ export default function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {!session ? <LoginForm /> : <LibraryManager />}
+      {!session ? (
+        <LoginForm />
+      ) : recoveryMode ? (
+        <UpdatePasswordForm onComplete={() => setRecoveryMode(false)} />
+      ) : (
+        <LibraryManager />
+      )}
     </ThemeProvider>
   )
 }
 
-function LoginForm() {
-  const [email, setEmail] = useState('')
+// --- FORMULÁŘ PRO ZMĚNU HESLA (Zobrazen po kliknutí na odkaz v e-mailu) ---
+function UpdatePasswordForm({ onComplete }: { onComplete: () => void }) {
   const [password, setPassword] = useState('')
-  const [errorMsg, setErrorMsg] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState('')
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
-    setErrorMsg('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) setErrorMsg('Špatný e-mail nebo heslo.')
+    const { error } = await supabase.auth.updateUser({ password })
+    if (error) {
+      setErrorMsg('Chyba při ukládání hesla.')
+    } else {
+      alert('Heslo bylo úspěšně změněno!')
+      onComplete()
+    }
     setIsLoading(false)
   }
 
   return (
     <Container maxWidth="sm" sx={{ mt: 10 }}>
       <Paper sx={{ p: 4, elevation: 3, textAlign: 'center' }}>
-        {/* fontWeight přesunuto do sx (řeší chybu 2769) */}
-        <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}>
-          Školní knihovna 📚
-        </Typography>
-        <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
-          Pro vstup do systému se prosím přihlaste.
-        </Typography>
-        <form onSubmit={handleLogin}>
+        <Typography variant="h5" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}>Změna hesla</Typography>
+        <Typography variant="body2" sx={{ mb: 3 }}>Zadejte své nové heslo.</Typography>
+        <form onSubmit={handleUpdate}>
           <Stack spacing={3}>
-            <TextField label="E-mail" type="email" required fullWidth value={email} onChange={(e) => setEmail(e.target.value)} />
-            <TextField label="Heslo" type="password" required fullWidth value={password} onChange={(e) => setPassword(e.target.value)} />
+            <TextField label="Nové heslo" type="password" required fullWidth value={password} onChange={(e) => setPassword(e.target.value)} />
             {errorMsg && <Typography color="error">{errorMsg}</Typography>}
-            <Button type="submit" variant="contained" size="large" disabled={isLoading}>{isLoading ? 'Přihlašuji...' : 'Přihlásit se'}</Button>
+            <Button type="submit" variant="contained" size="large" disabled={isLoading}>{isLoading ? 'Ukládám...' : 'Uložit heslo'}</Button>
           </Stack>
         </form>
       </Paper>
@@ -118,24 +125,79 @@ function LoginForm() {
   )
 }
 
-// Definujeme si typ pro formulář, aby TypeScript přesně věděl, co čekat
-interface BookFormData {
-  title: string
-  author: string
-  publisher: string
-  type: BookType
-  quantity: number
-  placement: Placement | string
+// --- PŘIHLAŠOVACÍ FORMULÁŘ A OBNOVA HESLA ---
+function LoginForm() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [isResetMode, setIsResetMode] = useState(false)
+  const [statusMsg, setStatusMsg] = useState({ text: '', type: 'error' })
+  const [isLoading, setIsLoading] = useState(false)
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setStatusMsg({ text: '', type: 'error' })
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) setStatusMsg({ text: 'Špatný e-mail nebo heslo.', type: 'error' })
+    setIsLoading(false)
+  }
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsLoading(true)
+    setStatusMsg({ text: '', type: 'error' })
+    
+    // Odeslání odkazu – vyžaduje správně nastavenou Site URL ve Vercelu / Supabase
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    })
+    
+    if (error) {
+      setStatusMsg({ text: 'Chyba při odesílání e-mailu.', type: 'error' })
+    } else {
+      setStatusMsg({ text: 'Odkaz pro obnovu byl odeslán na váš e-mail.', type: 'success' })
+    }
+    setIsLoading(false)
+  }
+
+  return (
+    <Container maxWidth="sm" sx={{ mt: 10 }}>
+      <Paper sx={{ p: 4, elevation: 3, textAlign: 'center' }}>
+        <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}>Školní knihovna 📚</Typography>
+        
+        {isResetMode ? (
+          <>
+            <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>Zadejte svůj e-mail, zašleme vám odkaz pro vytvoření nového hesla.</Typography>
+            <form onSubmit={handleResetPassword}>
+              <Stack spacing={3}>
+                <TextField label="E-mail" type="email" required fullWidth value={email} onChange={(e) => setEmail(e.target.value)} />
+                {statusMsg.text && <Typography color={statusMsg.type}>{statusMsg.text}</Typography>}
+                <Button type="submit" variant="contained" size="large" disabled={isLoading}>{isLoading ? 'Odesílám...' : 'Odeslat odkaz'}</Button>
+                <Link component="button" variant="body2" onClick={(e) => { e.preventDefault(); setIsResetMode(false); setStatusMsg({ text: '', type: 'error' }); }}>Zpět na přihlášení</Link>
+              </Stack>
+            </form>
+          </>
+        ) : (
+          <>
+            <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>Pro vstup do systému se prosím přihlaste.</Typography>
+            <form onSubmit={handleLogin}>
+              <Stack spacing={3}>
+                <TextField label="E-mail" type="email" required fullWidth value={email} onChange={(e) => setEmail(e.target.value)} />
+                <TextField label="Heslo" type="password" required fullWidth value={password} onChange={(e) => setPassword(e.target.value)} />
+                {statusMsg.text && <Typography color={statusMsg.type}>{statusMsg.text}</Typography>}
+                <Button type="submit" variant="contained" size="large" disabled={isLoading}>{isLoading ? 'Přihlašuji...' : 'Přihlásit se'}</Button>
+                <Link component="button" variant="body2" onClick={(e) => { e.preventDefault(); setIsResetMode(true); setStatusMsg({ text: '', type: 'error' }); }}>Zapomenuté heslo?</Link>
+              </Stack>
+            </form>
+          </>
+        )}
+      </Paper>
+    </Container>
+  )
 }
 
-// Přiřadíme tento typ naší výchozí konstantě
-const initialFormState: BookFormData = { 
-  title: '', 
-  author: '', 
-  publisher: '', 
-  type: BookType.FICTION_1, 
-  quantity: 1, 
-  placement: Placement.R1 
+const initialFormState = { 
+  title: '', author: '', publisher: '', type: BookType.FICTION_1, quantity: 1, placement: Placement.R1 
 }
 
 function LibraryManager() {
@@ -145,7 +207,7 @@ function LibraryManager() {
   
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [formData, setFormData] = useState(initialFormState)
+  const [formData, setFormData] = useState<any>(initialFormState)
   const [editingId, setEditingId] = useState<string | null>(null)
   
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
@@ -163,15 +225,19 @@ function LibraryManager() {
 
   useEffect(() => { fetchBooks() }, [])
 
-  const uniqueAuthors = Array.from(new Set(books.map(b => b.author).filter(Boolean))).sort()
-  const uniquePublishers = Array.from(new Set(books.map(b => b.publisher).filter(Boolean))).sort()
+  const uniqueAuthors = Array.from(new Set(books.map(b => b.author).filter(Boolean))).sort() as string[]
+  const uniquePublishers = Array.from(new Set(books.map(b => b.publisher).filter(Boolean))).sort() as string[]
 
   const handleOpenAdd = () => { setFormData(initialFormState); setEditingId(null); setIsFormOpen(true); }
   
   const handleOpenEdit = (book: Book) => { 
     setFormData({
-      title: book.title, author: book.author, publisher: book.publisher, 
-      type: book.type, quantity: book.quantity, placement: book.placement as Placement || Placement.R1
+      title: book.title, 
+      author: book.author || '', 
+      publisher: book.publisher || '', 
+      type: book.type, 
+      quantity: book.quantity, 
+      placement: book.placement as Placement || Placement.R1
     })
     setEditingId(book.id)
     setIsFormOpen(true) 
@@ -199,23 +265,35 @@ function LibraryManager() {
     }
   }
 
-  const filteredBooks = books.filter(book => 
-    book.title.toLowerCase().includes(search.toLowerCase()) || 
-    book.author.toLowerCase().includes(search.toLowerCase()) ||
-    (book.placement && book.placement.toLowerCase().includes(search.toLowerCase()))
-  )
+  // Komplexní filtrace s ošetřením null hodnot a správným překladem Enumu
+  const searchLower = search.toLowerCase()
+  const filteredBooks = books.filter(book => {
+    const typeLabel = BOOK_TYPE_LABELS[book.type as BookType] || ''
+    return (
+      book.title.toLowerCase().includes(searchLower) || 
+      (book.author && book.author.toLowerCase().includes(searchLower)) ||
+      (book.publisher && book.publisher.toLowerCase().includes(searchLower)) ||
+      (book.placement && book.placement.toLowerCase().includes(searchLower)) ||
+      typeLabel.toLowerCase().includes(searchLower)
+    )
+  })
 
   const columns: GridColDef[] = [
     { field: 'title', headerName: 'Název', flex: 1.5, minWidth: 200 },
     { field: 'author', headerName: 'Autor', flex: 1, minWidth: 150 },
     { field: 'publisher', headerName: 'Nakladatel', flex: 1, minWidth: 150 },
     { field: 'placement', headerName: 'Umístění', width: 120 },
-    { field: 'type', headerName: 'Typ', width: 170, renderCell: (params) => BOOK_TYPE_LABELS[params.value as BookType] || params.value },
+    { 
+      field: 'type', 
+      headerName: 'Typ', 
+      width: 170, 
+      // valueGetter zařídí správné řazení i zobrazení českého textu přímo v DataGridu
+      valueGetter: (value) => BOOK_TYPE_LABELS[value as BookType] || value 
+    },
     { field: 'quantity', headerName: 'Kusů', type: 'number', width: 100 },
     {
       field: 'actions', headerName: 'Akce', width: 120, sortable: false,
       renderCell: (params) => (
-        // alignItems přesunuto do sx (řeší chybu 2769)
         <Stack direction="row" spacing={1} sx={{ height: '100%', alignItems: 'center' }}>
           <IconButton size="small" color="primary" onClick={() => handleOpenEdit(params.row as Book)}><EditIcon fontSize="small" /></IconButton>
           <IconButton size="small" color="error" onClick={() => { setBookToDelete(params.row.id); setDeleteConfirmOpen(true) }}><DeleteIcon fontSize="small" /></IconButton>
@@ -227,17 +305,14 @@ function LibraryManager() {
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        {/* fontWeight přesunuto do sx (řeší chybu 2769) */}
-        <Typography variant="h3" component="h1" color="primary" sx={{ fontWeight: 'bold' }}>
-          Školní knihovna 📚
-        </Typography>
+        <Typography variant="h3" component="h1" color="primary" sx={{ fontWeight: 'bold' }}>Školní knihovna 📚</Typography>
         <Stack direction="row" spacing={2}>
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAdd}>Přidat knihu</Button>
           <Button variant="outlined" color="inherit" startIcon={<LogoutIcon />} onClick={() => supabase.auth.signOut()}>Odhlásit</Button>
         </Stack>
       </Box>
 
-      <TextField fullWidth label="🔍 Hledat knihu (podle názvu, autora nebo umístění)..." variant="outlined" sx={{ mb: 3, background: 'white' }} value={search} onChange={(e) => setSearch(e.target.value)} />
+      <TextField fullWidth label="🔍 Hledat knihu (podle názvu, autora, nakladatele, umístění nebo typu)..." variant="outlined" sx={{ mb: 3, background: 'white' }} value={search} onChange={(e) => setSearch(e.target.value)} />
 
       <Paper sx={{ height: 600, width: '100%', elevation: 3 }}>
         <DataGrid rows={filteredBooks} columns={columns} loading={loading} disableRowSelectionOnClick initialState={{ pagination: { paginationModel: { pageSize: 10 } } }} pageSizeOptions={[10, 25, 50]} sx={{ border: 'none' }} />
@@ -257,7 +332,8 @@ function LibraryManager() {
                   options={uniqueAuthors}
                   value={formData.author}
                   onInputChange={(_, newValue) => setFormData({ ...formData, author: newValue })}
-                  renderInput={(params) => <TextField {...params} required label="Autor" />}
+                  // Removed 'required' here
+                  renderInput={(params) => <TextField {...params} label="Autor" />}
                 />
                 <Autocomplete
                   freeSolo
