@@ -314,8 +314,8 @@ function LibraryManager() {
 
       <TextField fullWidth label="🔍 Hledat knihu (podle názvu, autora, nakladatele, umístění nebo typu)..." variant="outlined" sx={{ mb: 3, background: 'white' }} value={search} onChange={(e) => setSearch(e.target.value)} />
 
-      <Paper sx={{ height: 600, width: '100%', elevation: 3 }}>
-        <DataGrid rows={filteredBooks} columns={columns} loading={loading} disableRowSelectionOnClick initialState={{ pagination: { paginationModel: { pageSize: 10 } } }} pageSizeOptions={[10, 25, 50]} sx={{ border: 'none' }} />
+      <Paper sx={{ width: '100%', elevation: 3 }}>
+        <DataGrid autoHeight rows={filteredBooks} columns={columns} loading={loading} disableRowSelectionOnClick initialState={{ pagination: { paginationModel: { pageSize: 10 } } }} pageSizeOptions={[10, 25, 50]} sx={{ border: 'none' }} />
       </Paper>
 
       <Dialog open={isFormOpen} onClose={() => setIsFormOpen(false)} maxWidth="sm" fullWidth>
