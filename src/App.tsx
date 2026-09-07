@@ -83,7 +83,7 @@ export default function App() {
       ) : recoveryMode ? (
         <UpdatePasswordForm onComplete={() => setRecoveryMode(false)} />
       ) : (
-        <LibraryManager />
+        <LibraryManager userEmail={session.user.email} />
       )}
     </ThemeProvider>
   )
@@ -200,7 +200,7 @@ const initialFormState = {
   title: '', author: '', publisher: '', type: BookType.FICTION_1, quantity: 1, placement: Placement.R1 
 }
 
-function LibraryManager() {
+function LibraryManager({ userEmail }: { userEmail: string }) {
   const [books, setBooks] = useState<Book[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -305,8 +305,15 @@ function LibraryManager() {
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h3" component="h1" color="primary" sx={{ fontWeight: 'bold' }}>School library 📚</Typography>
-        <Stack direction="row" spacing={2}>
+        <Typography variant="h3" component="h1" color="primary" sx={{ fontWeight: 'bold' }}>
+          School library 📚
+        </Typography>
+  
+        <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
+          <Typography variant="body2" color="textSecondary" sx={{ mr: 1 }}>
+            Přihlášen: {userEmail}
+          </Typography>
+    
           <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAdd}>Přidat knihu</Button>
           <Button variant="outlined" color="inherit" startIcon={<LogoutIcon />} onClick={() => supabase.auth.signOut()}>Odhlásit</Button>
         </Stack>
