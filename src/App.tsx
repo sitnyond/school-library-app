@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabaseClient'
 import { csCZ } from '@mui/x-data-grid/locales'
 import { csCZ as coreCsCZ } from '@mui/material/locale'
@@ -93,13 +93,12 @@ export default function App() {
   )
 }
 
-// --- FORMULÁŘ PRO ZMĚNU HESLA (Zobrazen po kliknutí na odkaz v e-mailu) ---
 function UpdatePasswordForm({ onComplete }: { onComplete: () => void }) {
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
 
-  const handleUpdate = async (e: React.FormEvent) => {
+  const handleUpdate = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     setIsLoading(true)
     const { error } = await supabase.auth.updateUser({ password })
@@ -137,7 +136,7 @@ function LoginForm() {
   const [statusMsg, setStatusMsg] = useState({ text: '', type: 'error' })
   const [isLoading, setIsLoading] = useState(false)
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setStatusMsg({ text: '', type: 'error' })
@@ -146,7 +145,7 @@ function LoginForm() {
     setIsLoading(false)
   }
 
-  const handleResetPassword = async (e: React.FormEvent) => {
+  const handleResetPassword = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setStatusMsg({ text: '', type: 'error' })
@@ -229,8 +228,13 @@ function LibraryManager({ userEmail }: { userEmail: string }) {
 
   useEffect(() => { fetchBooks() }, [])
 
-  const uniqueAuthors = Array.from(new Set(books.map(b => b.author).filter(Boolean))).sort() as string[]
-  const uniquePublishers = Array.from(new Set(books.map(b => b.publisher).filter(Boolean))).sort() as string[]
+  const { uniqueTitles, uniqueAuthors, uniquePublishers } = useMemo(() => {
+    return {
+      uniqueTitles: Array.from(new Set(books.map(b => b.title).filter(Boolean))).sort() as string[],
+      uniqueAuthors: Array.from(new Set(books.map(b => b.author).filter(Boolean))).sort() as string[],
+      uniquePublishers: Array.from(new Set(books.map(b => b.publisher).filter(Boolean))).sort() as string[]
+    }
+  }, [books]) // To [books] na konci je klíčové - říká "počítej to znovu, jen když se změní knihy"
 
   const handleOpenAdd = () => { setFormData(initialFormState); setEditingId(null); setIsFormOpen(true); }
   
@@ -247,13 +251,21 @@ function LibraryManager({ userEmail }: { userEmail: string }) {
     setIsFormOpen(true) 
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+  
+    const cleanData = {
+      ...formData,
+      title: formData.title.trim(),
+      author: formData.author ? formData.author.trim() : '',
+      publisher: formData.publisher ? formData.publisher.trim() : ''
+    }
+
     if (editingId) {
-      await supabase.from('books').update(formData).eq('id', editingId)
+      await supabase.from('books').update(cleanData).eq('id', editingId)
     } else {
-      await supabase.from('books').insert([formData])
+      await supabase.from('books').insert([cleanData])
     }
     setIsFormOpen(false)
     setIsSubmitting(false)
@@ -269,7 +281,6 @@ function LibraryManager({ userEmail }: { userEmail: string }) {
     }
   }
 
-  // Komplexní filtrace s ošetřením null hodnot a správným překladem Enumu
   const searchLower = search.toLowerCase()
   const filteredBooks = books.filter(book => {
     const typeLabel = BOOK_TYPE_LABELS[book.type as BookType] || ''
@@ -291,7 +302,6 @@ function LibraryManager({ userEmail }: { userEmail: string }) {
       field: 'type', 
       headerName: 'Typ', 
       width: 170, 
-      // valueGetter zařídí správné řazení i zobrazení českého textu přímo v DataGridu
       valueGetter: (value) => BOOK_TYPE_LABELS[value as BookType] || value 
     },
     { field: 'quantity', headerName: 'Kusů', type: 'number', width: 100 },
@@ -334,8 +344,14 @@ function LibraryManager({ userEmail }: { userEmail: string }) {
           <DialogTitle>{editingId ? 'Upravit knihu' : 'Přidat novou knihu'}</DialogTitle>
           <DialogContent dividers>
             <Stack spacing={2} sx={{ mt: 1 }}>
-              <TextField required label="Název knihy" fullWidth value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
-              
+              <Autocomplete
+                freeSolo
+                fullWidth
+                options={uniqueTitles}
+                value={formData.title}
+                onInputChange={(_, newValue) => setFormData({ ...formData, title: newValue })}
+                renderInput={(params) => <TextField {...params} required label="Název knihy" />}
+              />              
               <Stack direction="row" spacing={2}>
                 <Autocomplete
                   freeSolo
@@ -343,7 +359,6 @@ function LibraryManager({ userEmail }: { userEmail: string }) {
                   options={uniqueAuthors}
                   value={formData.author}
                   onInputChange={(_, newValue) => setFormData({ ...formData, author: newValue })}
-                  // Removed 'required' here
                   renderInput={(params) => <TextField {...params} label="Autor" />}
                 />
                 <Autocomplete
