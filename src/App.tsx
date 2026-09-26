@@ -17,7 +17,9 @@ export const BookType = {
   FICTION_1: 'fiction_1',
   FICTION_2: 'fiction_2',
   EDUCATION: 'education',
-  MAGAZINE: 'magazine'
+  MAGAZINE: 'magazine',
+  GAMES: 'games',
+  OTHER: 'other'
 } as const
 export type BookType = typeof BookType[keyof typeof BookType]
 
@@ -25,7 +27,9 @@ export const BOOK_TYPE_LABELS: Record<BookType, string> = {
   [BookType.FICTION_1]: 'Beletrie 1. stupeň',
   [BookType.FICTION_2]: 'Beletrie 2. stupeň',
   [BookType.EDUCATION]: 'Odborná literatura',
-  [BookType.MAGAZINE]: 'Časopis'
+  [BookType.MAGAZINE]: 'Časopis',
+  [BookType.GAMES]: 'Hry',
+  [BookType.OTHER]: 'Ostatní'
 }
 
 export const Placement = {
