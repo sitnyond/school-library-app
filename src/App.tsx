@@ -13,43 +13,9 @@ import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
 import LogoutIcon from '@mui/icons-material/Logout'
 
-export const BookType = {
-  FICTION_1: 'fiction_1',
-  FICTION_2: 'fiction_2',
-  EDUCATION: 'education',
-  MAGAZINE: 'magazine',
-  GAMES: 'games',
-  OTHER: 'other'
-} as const
-export type BookType = typeof BookType[keyof typeof BookType]
+import { BookType, BOOK_TYPE_LABELS, Placement } from './types'
+import type { Book } from './types'
 
-export const BOOK_TYPE_LABELS: Record<BookType, string> = {
-  [BookType.FICTION_1]: 'Beletrie 1. stupeň',
-  [BookType.FICTION_2]: 'Beletrie 2. stupeň',
-  [BookType.EDUCATION]: 'Odborná literatura',
-  [BookType.MAGAZINE]: 'Časopis',
-  [BookType.GAMES]: 'Hry',
-  [BookType.OTHER]: 'Ostatní'
-}
-
-export const Placement = {
-  R1: 'R1',
-  R2: 'R2',
-  R3: 'R3',
-  R4: 'R4',
-  R5: 'R5'
-} as const
-export type Placement = typeof Placement[keyof typeof Placement]
-
-interface Book {
-  id: string
-  title: string
-  author: string | null
-  publisher: string | null
-  type: BookType
-  quantity: number
-  placement: Placement | string 
-}
 
 const theme = createTheme({
   palette: { mode: 'light', background: { default: '#f4f6f8' } },
