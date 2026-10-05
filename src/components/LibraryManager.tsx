@@ -9,28 +9,46 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
 import LogoutIcon from '@mui/icons-material/Logout'
+import SettingsIcon from '@mui/icons-material/Settings'
 
-import { BOOK_TYPE_LABELS, initialFormState, Placement } from '../types'
+import { emptyBookForm } from '../types'
 import type { Book, BookFormData } from '../types'
 import { useBooks } from '../hooks/useBooks'
+import { useLookups } from '../hooks/useLookups'
 import { BookFormDialog } from './BookFormDialog'
 import { DeleteConfirmDialog } from './DeleteConfirmDialog'
+import { CatalogSettingsDialog } from './CatalogSettingsDialog'
 
 interface LibraryManagerProps {
   userEmail: string
 }
 
 export function LibraryManager({ userEmail }: LibraryManagerProps) {
-  const { books, loading, errorMessage, setErrorMessage, saveBook, deleteBook } = useBooks()
+  const { books, loading: booksLoading, errorMessage, setErrorMessage, fetchBooks, saveBook, deleteBook } = useBooks()
+  const {
+    types,
+    placements,
+    loading: lookupsLoading,
+    errorMessage: lookupError,
+    setErrorMessage: setLookupError,
+    saveLookup,
+    deleteLookup,
+    lookupErrorMessage,
+  } = useLookups()
+
+  const isLoading = booksLoading || lookupsLoading
   const [search, setSearch] = useState('')
 
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [formData, setFormData] = useState<BookFormData>(initialFormState)
+  const [formData, setFormData] = useState<BookFormData>(emptyBookForm)
   const [editingId, setEditingId] = useState<string | null>(null)
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [bookToDelete, setBookToDelete] = useState<string | null>(null)
+
+  const displayError = errorMessage || lookupError
 
   const { uniqueTitles, uniqueAuthors, uniquePublishers } = useMemo(() => {
     return {
@@ -40,8 +58,14 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
     }
   }, [books])
 
+  const defaultForm = useCallback((): BookFormData => ({
+    ...emptyBookForm,
+    type_id: types[0]?.id ?? '',
+    placement_id: placements[0]?.id ?? '',
+  }), [types, placements])
+
   const handleOpenAdd = () => {
-    setFormData(initialFormState)
+    setFormData(defaultForm())
     setEditingId(null)
     setErrorMessage(null)
     setIsFormOpen(true)
@@ -52,9 +76,9 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
       title: book.title,
       author: book.author || '',
       publisher: book.publisher || '',
-      type: book.type,
+      type_id: book.type_id,
       quantity: book.quantity,
-      placement: book.placement || Placement.R1
+      placement_id: book.placement_id,
     })
     setEditingId(book.id)
     setErrorMessage(null)
@@ -63,13 +87,20 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
+    setErrorMessage(null)
+
+    if (!formData.type_id || !formData.placement_id) {
+      setErrorMessage('Vyberte prosím platný typ a umístění knihy. Pokud žádné neexistují, vytvořte je v Nastavení.')
+      return
+    }
+
     setIsSubmitting(true)
 
     const cleanData = {
       ...formData,
       title: formData.title.trim(),
       author: formData.author ? formData.author.trim() : '',
-      publisher: formData.publisher ? formData.publisher.trim() : ''
+      publisher: formData.publisher ? formData.publisher.trim() : '',
     }
 
     try {
@@ -84,6 +115,7 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
 
   const confirmDelete = async () => {
     if (!bookToDelete) return
+    setErrorMessage(null)
     try {
       await deleteBook(bookToDelete)
       setDeleteConfirmOpen(false)
@@ -96,12 +128,13 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
   const filteredBooks = useMemo(() => {
     const searchLower = search.toLowerCase()
     return books.filter(book => {
-      const typeLabel = BOOK_TYPE_LABELS[book.type] || ''
+      const typeLabel = book.type?.name || ''
+      const placementLabel = book.placement?.name || ''
       return (
         book.title.toLowerCase().includes(searchLower) ||
         (book.author && book.author.toLowerCase().includes(searchLower)) ||
         (book.publisher && book.publisher.toLowerCase().includes(searchLower)) ||
-        (book.placement && book.placement.toLowerCase().includes(searchLower)) ||
+        placementLabel.toLowerCase().includes(searchLower) ||
         typeLabel.toLowerCase().includes(searchLower)
       )
     })
@@ -111,12 +144,17 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
     { field: 'title', headerName: 'Název', flex: 1.5, minWidth: 200 },
     { field: 'author', headerName: 'Autor', flex: 1, minWidth: 150 },
     { field: 'publisher', headerName: 'Nakladatel', flex: 1, minWidth: 150 },
-    { field: 'placement', headerName: 'Umístění', width: 120 },
+    {
+      field: 'placement',
+      headerName: 'Umístění',
+      width: 120,
+      valueGetter: (_value, row: Book) => row.placement?.name ?? '',
+    },
     {
       field: 'type',
       headerName: 'Typ',
       width: 170,
-      valueGetter: (value) => BOOK_TYPE_LABELS[value as Book['type']] || value
+      valueGetter: (_value, row: Book) => row.type?.name ?? '',
     },
     { field: 'quantity', headerName: 'Kusů', type: 'number', width: 100 },
     {
@@ -126,16 +164,16 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
       sortable: false,
       renderCell: (params) => (
         <Stack direction="row" spacing={1} sx={{ height: '100%', alignItems: 'center' }}>
-          <IconButton size="small" color="primary" onClick={() => handleOpenEdit(params.row as Book)}>
+          <IconButton size="small" color="primary" disabled={isLoading} onClick={() => handleOpenEdit(params.row as Book)}>
             <EditIcon fontSize="small" />
           </IconButton>
-          <IconButton size="small" color="error" onClick={() => { setBookToDelete(params.row.id); setDeleteConfirmOpen(true) }}>
+          <IconButton size="small" color="error" disabled={isLoading} onClick={() => { setBookToDelete(params.row.id); setDeleteConfirmOpen(true) }}>
             <DeleteIcon fontSize="small" />
           </IconButton>
         </Stack>
       ),
     },
-  ], [handleOpenEdit])
+  ], [handleOpenEdit, isLoading])
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -149,14 +187,22 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
             Přihlášen: {userEmail}
           </Typography>
 
-          <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenAdd}>Přidat knihu</Button>
+          <Button variant="outlined" disabled={isLoading} startIcon={<SettingsIcon />} onClick={() => setIsSettingsOpen(true)}>Nastavení</Button>
+          <Button variant="contained" disabled={isLoading} startIcon={<AddIcon />} onClick={handleOpenAdd}>Přidat knihu</Button>
           <Button variant="outlined" color="inherit" startIcon={<LogoutIcon />} onClick={() => supabase.auth.signOut()}>Odhlásit</Button>
         </Stack>
       </Box>
 
-      {errorMessage && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setErrorMessage(null)}>
-          {errorMessage}
+      {displayError && (
+        <Alert
+          severity="error"
+          sx={{ mb: 3 }}
+          onClose={() => {
+            setErrorMessage(null)
+            setLookupError(null)
+          }}
+        >
+          {displayError}
         </Alert>
       )}
 
@@ -174,7 +220,7 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
           autoHeight
           rows={filteredBooks}
           columns={columns}
-          loading={loading}
+          loading={isLoading}
           disableRowSelectionOnClick
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           pageSizeOptions={[10, 25, 50]}
@@ -191,8 +237,29 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
         uniqueTitles={uniqueTitles}
         uniqueAuthors={uniqueAuthors}
         uniquePublishers={uniquePublishers}
-        onClose={() => setIsFormOpen(false)}
+        types={types}
+        placements={placements}
+        onClose={() => {
+          setIsFormOpen(false)
+          setErrorMessage(null)
+        }}
         onSubmit={handleSubmit}
+      />
+
+      <CatalogSettingsDialog
+        open={isSettingsOpen}
+        types={types}
+        placements={placements}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={async (table, name, id) => {
+          await saveLookup(table, name, id)
+          await fetchBooks()
+        }}
+        onDelete={async (table, id) => {
+          await deleteLookup(table, id)
+          await fetchBooks()
+        }}
+        mapError={lookupErrorMessage}
       />
 
       <DeleteConfirmDialog

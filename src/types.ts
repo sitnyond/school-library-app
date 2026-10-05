@@ -1,55 +1,34 @@
-export const BookType = {
-  FICTION_1: 'fiction_1',
-  FICTION_2: 'fiction_2',
-  EDUCATION: 'education',
-  MAGAZINE: 'magazine',
-  GAMES: 'games',
-  OTHER: 'other'
-} as const
-export type BookType = typeof BookType[keyof typeof BookType]
-
-export const BOOK_TYPE_LABELS: Record<BookType, string> = {
-  [BookType.FICTION_1]: 'Beletrie 1. stupeň',
-  [BookType.FICTION_2]: 'Beletrie 2. stupeň',
-  [BookType.EDUCATION]: 'Odborná literatura',
-  [BookType.MAGAZINE]: 'Časopis',
-  [BookType.GAMES]: 'Hry',
-  [BookType.OTHER]: 'Ostatní'
+export interface LookupOption {
+  id: string
+  name: string
 }
-
-export const Placement = {
-  R1: 'R1',
-  R2: 'R2',
-  R3: 'R3',
-  R4: 'R4',
-  R5: 'R5'
-} as const
-export type Placement = typeof Placement[keyof typeof Placement]
 
 export interface Book {
   id: string
   title: string
   author: string | null
   publisher: string | null
-  type: BookType
+  type_id: string
+  placement_id: string
   quantity: number
-  placement: Placement
+  type?: LookupOption | null
+  placement?: LookupOption | null
 }
 
 export interface BookFormData {
   title: string
   author: string
   publisher: string
-  type: BookType
+  type_id: string
   quantity: number
-  placement: Placement
+  placement_id: string
 }
 
-export const initialFormState: BookFormData = {
+export const emptyBookForm: BookFormData = {
   title: '',
   author: '',
   publisher: '',
-  type: BookType.FICTION_1,
+  type_id: '',
   quantity: 1,
-  placement: Placement.R1
+  placement_id: '',
 }

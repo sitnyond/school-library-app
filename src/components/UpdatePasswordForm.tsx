@@ -13,6 +13,7 @@ export function UpdatePasswordForm({ onComplete }: UpdatePasswordFormProps) {
 
   const handleUpdate = async (e: React.SyntheticEvent) => {
     e.preventDefault()
+    setErrorMsg('')
     setIsLoading(true)
     const { error } = await supabase.auth.updateUser({ password })
     if (error) {

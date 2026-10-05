@@ -10,8 +10,7 @@ import {
   Stack,
   TextField,
 } from '@mui/material'
-import { BookType, BOOK_TYPE_LABELS, Placement } from '../types'
-import type { BookFormData } from '../types'
+import type { BookFormData, LookupOption } from '../types'
 
 interface BookFormDialogProps {
   open: boolean
@@ -22,6 +21,8 @@ interface BookFormDialogProps {
   uniqueTitles: string[]
   uniqueAuthors: string[]
   uniquePublishers: string[]
+  types: LookupOption[]
+  placements: LookupOption[]
   onClose: () => void
   onSubmit: (e: SyntheticEvent) => void
 }
@@ -35,6 +36,8 @@ export function BookFormDialog({
   uniqueTitles,
   uniqueAuthors,
   uniquePublishers,
+  types,
+  placements,
   onClose,
   onSubmit,
 }: BookFormDialogProps) {
@@ -74,25 +77,27 @@ export function BookFormDialog({
             <Stack direction="row" spacing={2}>
               <TextField
                 select
+                required
                 label="Umístění"
                 fullWidth
-                value={formData.placement}
-                onChange={(e) => setFormData(prev => ({ ...prev, placement: e.target.value as Placement }))}
+                value={formData.placement_id}
+                onChange={(e) => setFormData(prev => ({ ...prev, placement_id: e.target.value }))}
               >
-                {Object.values(Placement).map((loc) => (
-                  <MenuItem key={loc} value={loc}>{loc}</MenuItem>
+                {placements.map((loc) => (
+                  <MenuItem key={loc.id} value={loc.id}>{loc.name}</MenuItem>
                 ))}
               </TextField>
 
               <TextField
                 select
+                required
                 label="Typ knihy"
                 fullWidth
-                value={formData.type}
-                onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as BookType }))}
+                value={formData.type_id}
+                onChange={(e) => setFormData(prev => ({ ...prev, type_id: e.target.value }))}
               >
-                {Object.entries(BOOK_TYPE_LABELS).map(([key, label]) => (
-                  <MenuItem key={key} value={key}>{label}</MenuItem>
+                {types.map((type) => (
+                  <MenuItem key={type.id} value={type.id}>{type.name}</MenuItem>
                 ))}
               </TextField>
             </Stack>

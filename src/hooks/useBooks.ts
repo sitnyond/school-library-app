@@ -10,7 +10,10 @@ export function useBooks() {
   const fetchBooks = useCallback(async () => {
     try {
       setLoading(true)
-      const { data, error } = await supabase.from('books').select('*').order('id', { ascending: false })
+      const { data, error } = await supabase
+        .from('books')
+        .select('*, type:book_types(id, name), placement:placements(id, name)')
+        .order('id', { ascending: false })
       if (error) {
         setErrorMessage(`Chyba při načítání knih: ${error.message}`)
       } else {
