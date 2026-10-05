@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import { supabase } from './supabaseClient'
 import { csCZ } from '@mui/x-data-grid/locales'
 import { csCZ as coreCsCZ } from '@mui/material/locale'
@@ -8,12 +9,16 @@ import { LoginForm } from './components/LoginForm'
 import { UpdatePasswordForm } from './components/UpdatePasswordForm'
 import { LibraryManager } from './components/LibraryManager'
 
-const theme = createTheme({
-  palette: { mode: 'light', background: { default: '#f4f6f8' } },
-}, csCZ, coreCsCZ)
+const theme = createTheme(
+  {
+    palette: { mode: 'light', background: { default: '#f4f6f8' } },
+  },
+  csCZ,
+  coreCsCZ
+)
 
 export default function App() {
-  const [session, setSession] = useState<any>(null)
+  const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [recoveryMode, setRecoveryMode] = useState(false)
 
@@ -25,7 +30,6 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
-      // Záchyt speciálního eventu, kdy se uživatel vrací přes link z e-mailu
       if (event === 'PASSWORD_RECOVERY') {
         setRecoveryMode(true)
       }
@@ -44,7 +48,7 @@ export default function App() {
       ) : recoveryMode ? (
         <UpdatePasswordForm onComplete={() => setRecoveryMode(false)} />
       ) : (
-        <LibraryManager userEmail={session.user.email} />
+        <LibraryManager userEmail={session.user.email || ''} />
       )}
     </ThemeProvider>
   )
