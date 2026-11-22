@@ -10,7 +10,7 @@ import {
   Stack,
   TextField,
 } from '@mui/material'
-import type { BookFormData, LookupOption } from '../types'
+import type { BookFormData, LookupOption } from '../../types'
 
 interface BookFormDialogProps {
   open: boolean

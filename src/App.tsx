@@ -7,7 +7,7 @@ import { CssBaseline, ThemeProvider, createTheme } from '@mui/material'
 
 import { LoginForm } from './components/LoginForm'
 import { UpdatePasswordForm } from './components/UpdatePasswordForm'
-import { LibraryManager } from './components/LibraryManager'
+import { AppShell } from './components/AppShell'
 
 const theme = createTheme(
   {
@@ -48,7 +48,7 @@ export default function App() {
       ) : recoveryMode ? (
         <UpdatePasswordForm onComplete={() => setRecoveryMode(false)} />
       ) : (
-        <LibraryManager userEmail={session.user.email || ''} />
+        <AppShell userEmail={session.user.email || ''} />
       )}
     </ThemeProvider>
   )

@@ -1,30 +1,24 @@
 import { useCallback, useMemo, useState } from 'react'
-import { supabase } from '../supabaseClient'
 import {
-  Container, Typography, TextField, Button, Box, Paper, Stack,
+  TextField, Button, Box, Paper, Stack,
   IconButton, Alert
 } from '@mui/material'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
-import LogoutIcon from '@mui/icons-material/Logout'
-import SettingsIcon from '@mui/icons-material/Settings'
+import TuneIcon from '@mui/icons-material/Tune'
 
-import { emptyBookForm } from '../types'
-import type { Book, BookFormData } from '../types'
-import { useBooks } from '../hooks/useBooks'
-import { useLookups } from '../hooks/useLookups'
-import { BookFormDialog } from './BookFormDialog'
-import { DeleteConfirmDialog } from './DeleteConfirmDialog'
-import { CatalogSettingsDialog } from './CatalogSettingsDialog'
+import { emptyBookForm } from '../../types'
+import type { Book, BookFormData } from '../../types'
+import { useLibraryData } from '../../context/libraryDataContext'
+import { BookFormDialog } from '../books/BookFormDialog'
+import { DeleteConfirmDialog } from '../books/DeleteConfirmDialog'
+import { CatalogSettingsDialog } from '../CatalogSettingsDialog'
 
-interface LibraryManagerProps {
-  userEmail: string
-}
-
-export function LibraryManager({ userEmail }: LibraryManagerProps) {
-  const { books, loading: booksLoading, errorMessage, setErrorMessage, fetchBooks, saveBook, deleteBook } = useBooks()
+export function BooksTab() {
+  const { books: booksData, lookups } = useLibraryData()
+  const { books, loading: booksLoading, errorMessage, setErrorMessage, fetchBooks, saveBook, deleteBook } = booksData
   const {
     types,
     placements,
@@ -34,7 +28,7 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
     saveLookup,
     deleteLookup,
     lookupErrorMessage,
-  } = useLookups()
+  } = lookups
 
   const isLoading = booksLoading || lookupsLoading
   const [search, setSearch] = useState('')
@@ -176,23 +170,7 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
   ], [handleOpenEdit, isLoading])
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Typography variant="h3" component="h1" color="primary" sx={{ fontWeight: 'bold' }}>
-          School library 📚
-        </Typography>
-
-        <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
-          <Typography variant="body2" color="textSecondary" sx={{ mr: 1 }}>
-            Přihlášen: {userEmail}
-          </Typography>
-
-          <Button variant="outlined" disabled={isLoading} startIcon={<SettingsIcon />} onClick={() => setIsSettingsOpen(true)}>Nastavení</Button>
-          <Button variant="contained" disabled={isLoading} startIcon={<AddIcon />} onClick={handleOpenAdd}>Přidat knihu</Button>
-          <Button variant="outlined" color="inherit" startIcon={<LogoutIcon />} onClick={() => supabase.auth.signOut()}>Odhlásit</Button>
-        </Stack>
-      </Box>
-
+    <Box>
       {displayError && (
         <Alert
           severity="error"
@@ -206,14 +184,20 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
         </Alert>
       )}
 
-      <TextField
-        fullWidth
-        label="🔍 Hledat knihu (podle názvu, autora, nakladatele, umístění nebo typu)..."
-        variant="outlined"
-        sx={{ mb: 3, background: 'white' }}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3, alignItems: { md: 'center' } }}>
+        <TextField
+          fullWidth
+          label="🔍 Hledat knihu (podle názvu, autora, nakladatele, umístění nebo typu)..."
+          variant="outlined"
+          sx={{ background: 'white' }}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <Stack direction="row" spacing={2} sx={{ flexShrink: 0 }}>
+          <Button variant="outlined" disabled={isLoading} startIcon={<TuneIcon />} onClick={() => setIsSettingsOpen(true)}>Číselníky</Button>
+          <Button variant="contained" disabled={isLoading} startIcon={<AddIcon />} onClick={handleOpenAdd}>Přidat knihu</Button>
+        </Stack>
+      </Stack>
 
       <Paper elevation={3} sx={{ width: '100%' }}>
         <DataGrid
@@ -267,6 +251,6 @@ export function LibraryManager({ userEmail }: LibraryManagerProps) {
         onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={confirmDelete}
       />
-    </Container>
+    </Box>
   )
 }
