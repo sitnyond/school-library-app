@@ -11,6 +11,7 @@ import AddIcon from '@mui/icons-material/Add'
 import { emptyBookForm } from '../../types'
 import type { Book, BookFormData } from '../../types'
 import { useLibraryData } from '../../context/libraryDataContext'
+import { getErrorMessage } from '../../utils/errors'
 import { BookFormDialog } from '../books/BookFormDialog'
 import { DeleteConfirmDialog } from '../books/DeleteConfirmDialog'
 
@@ -95,7 +96,7 @@ export function BooksTab() {
       await saveBook(cleanData, editingId)
       setIsFormOpen(false)
     } catch (err: unknown) {
-      setErrorMessage(err instanceof Error ? err.message : 'Chyba při ukládání knihy')
+      setErrorMessage(getErrorMessage(err, 'Chyba při ukládání knihy'))
     } finally {
       setIsSubmitting(false)
     }
@@ -109,7 +110,7 @@ export function BooksTab() {
       setDeleteConfirmOpen(false)
       setBookToDelete(null)
     } catch (err: unknown) {
-      setErrorMessage(err instanceof Error ? err.message : 'Chyba při mazání knihy')
+      setErrorMessage(getErrorMessage(err, 'Chyba při mazání knihy'))
     }
   }
 

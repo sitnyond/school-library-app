@@ -3,13 +3,15 @@ import { Alert, Box, LinearProgress, Stack, Typography } from '@mui/material'
 import { useLibraryData } from '../../context/libraryDataContext'
 import type { LookupTable } from '../../hooks/useLookups'
 import { LookupSection } from '../settings/LookupSection'
+import { LoanSettingsSection } from '../settings/LoanSettingsSection'
 
 export function SettingsTab() {
-  const { books, lookups } = useLibraryData()
-  const { types, placements, loading, errorMessage, setErrorMessage, saveLookup, deleteLookup, lookupErrorMessage } = lookups
+  const { books, lookups, appSettings } = useLibraryData()
+  const { types, placements, classes, saveLookup, deleteLookup, lookupErrorMessage } = lookups
   const [localError, setLocalError] = useState<string | null>(null)
 
-  const displayError = localError || errorMessage
+  const loading = lookups.loading || appSettings.loading
+  const displayError = localError || lookups.errorMessage || appSettings.errorMessage
 
   const handleError = (err: unknown, fallback: string) => {
     setLocalError(lookupErrorMessage(err, fallback))
@@ -19,48 +21,71 @@ export function SettingsTab() {
   const handleSave = async (table: LookupTable, name: string, id?: string) => {
     setLocalError(null)
     await saveLookup(table, name, id)
-    await books.fetchBooks()
+    if (table !== 'classes') await books.fetchBooks()
   }
 
   const handleDelete = async (table: LookupTable, id: string) => {
     setLocalError(null)
     await deleteLookup(table, id)
-    await books.fetchBooks()
+    if (table !== 'classes') await books.fetchBooks()
   }
+
+  const handleSaveLoanDays = async (loanDays: number) => {
+    setLocalError(null)
+    await appSettings.saveSettings({ loan_days: loanDays })
+  }
+
+  const sectionProps = { onSave: handleSave, onDelete: handleDelete, onError: handleError }
 
   return (
     <Stack spacing={3}>
       <Box>
         <Typography variant="h5">Nastavení</Typography>
-        <Typography variant="body2" color="textSecondary">Číselníky používané v katalogu knih.</Typography>
+        <Typography variant="body2" color="textSecondary">Číselníky a parametry výpůjček.</Typography>
       </Box>
 
       {loading && <LinearProgress />}
 
       {displayError && (
-        <Alert severity="error" onClose={() => { setLocalError(null); setErrorMessage(null) }}>
+        <Alert
+          severity="error"
+          onClose={() => {
+            setLocalError(null)
+            lookups.setErrorMessage(null)
+            appSettings.setErrorMessage(null)
+          }}
+        >
           {displayError}
         </Alert>
       )}
 
       <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+        <LoanSettingsSection
+          loanDays={appSettings.settings.loan_days}
+          disabled={appSettings.loading}
+          onSave={handleSaveLoanDays}
+          onError={handleError}
+        />
+        <LookupSection
+          title="Třídy"
+          description="Při půjčení se vybírá třída a píše jen zkrácené jméno žáka."
+          table="classes"
+          items={classes}
+          {...sectionProps}
+        />
         <LookupSection
           title="Typy knih"
           description="Např. beletrie, odborná literatura, časopis."
           table="book_types"
           items={types}
-          onSave={handleSave}
-          onDelete={handleDelete}
-          onError={handleError}
+          {...sectionProps}
         />
         <LookupSection
           title="Umístění"
           description="Regály nebo místa, kde jsou knihy uložené."
           table="placements"
           items={placements}
-          onSave={handleSave}
-          onDelete={handleDelete}
-          onError={handleError}
+          {...sectionProps}
         />
       </Box>
     </Stack>
