@@ -10,8 +10,8 @@ export function SettingsTab() {
   const { types, placements, classes, saveLookup, deleteLookup, lookupErrorMessage } = lookups
   const [localError, setLocalError] = useState<string | null>(null)
 
-  const loading = lookups.loading || appSettings.loading
-  const displayError = localError || lookups.errorMessage || appSettings.errorMessage
+  const loading = lookups.loading || appSettings.loading || loans.loading
+  const displayError = localError || lookups.errorMessage || appSettings.errorMessage || loans.errorMessage
 
   const handleError = (err: unknown, fallback: string) => {
     setLocalError(lookupErrorMessage(err, fallback))
@@ -39,6 +39,11 @@ export function SettingsTab() {
     await appSettings.saveSettings({ loan_days: loanDays })
   }
 
+  const handleClearHistory = async () => {
+    setLocalError(null)
+    await loans.clearLoanHistory()
+  }
+
   const sectionProps = { onSave: handleSave, onDelete: handleDelete, onError: handleError }
 
   return (
@@ -57,6 +62,7 @@ export function SettingsTab() {
             setLocalError(null)
             lookups.setErrorMessage(null)
             appSettings.setErrorMessage(null)
+            loans.setErrorMessage(null)
           }}
         >
           {displayError}
@@ -66,8 +72,10 @@ export function SettingsTab() {
       <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
         <LoanSettingsSection
           loanDays={appSettings.settings.loan_days}
-          disabled={appSettings.loading}
+          historyCount={loans.returnedLoans.length}
+          disabled={appSettings.loading || loans.loading}
           onSave={handleSaveLoanDays}
+          onClearHistory={handleClearHistory}
           onError={handleError}
         />
         <LookupSection
