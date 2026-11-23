@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Alert, Box, LinearProgress, Stack, Typography } from '@mui/material'
 import { useLibraryData } from '../../context/libraryDataContext'
+import { useSnackbar } from '../../context/snackbarContext'
 import type { LookupTable } from '../../hooks/useLookups'
 import { LookupSection } from '../settings/LookupSection'
 import { LoanSettingsSection } from '../settings/LoanSettingsSection'
 
 export function SettingsTab() {
   const { books, lookups, appSettings, loans } = useLibraryData()
+  const { showNotification } = useSnackbar()
   const { types, placements, classes, saveLookup, deleteLookup, lookupErrorMessage } = lookups
   const [localError, setLocalError] = useState<string | null>(null)
 
@@ -26,22 +28,26 @@ export function SettingsTab() {
     } else {
       await books.fetchBooks()
     }
+    showNotification(id ? 'Položka byla upravena.' : 'Položka byla přidána.')
   }
 
   const handleDelete = async (table: LookupTable, id: string) => {
     setLocalError(null)
     await deleteLookup(table, id)
     if (table !== 'classes') await books.fetchBooks()
+    showNotification('Položka byla smazána.')
   }
 
   const handleSaveLoanDays = async (loanDays: number) => {
     setLocalError(null)
     await appSettings.saveSettings({ loan_days: loanDays })
+    showNotification('Výchozí délka výpůjčky byla uložena.')
   }
 
   const handleClearHistory = async () => {
     setLocalError(null)
     await loans.clearLoanHistory()
+    showNotification('Historie vrácených výpůjček byla smazána.')
   }
 
   const sectionProps = { onSave: handleSave, onDelete: handleDelete, onError: handleError }

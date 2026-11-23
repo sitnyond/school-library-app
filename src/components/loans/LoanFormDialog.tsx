@@ -14,6 +14,7 @@ import {
   Typography,
 } from '@mui/material'
 import { useLibraryData } from '../../context/libraryDataContext'
+import { useSnackbar } from '../../context/snackbarContext'
 import type { Book } from '../../types'
 import { addDaysIsoDate, todayIsoDate } from '../../utils/dates'
 import { getErrorMessage } from '../../utils/errors'
@@ -47,6 +48,7 @@ function LoanFormContent({
   onClose: () => void
 }) {
   const { books: booksData, lookups, appSettings, loans } = useLibraryData()
+  const { showNotification } = useSnackbar()
   const loanDays = appSettings.settings.loan_days
 
   const availableBooks = useMemo<BookOption[]>(() => {
@@ -129,6 +131,7 @@ function LoanFormContent({
         loaned_at: loanedAt,
         due_date: dueDate,
       })
+      showNotification('Výpůjčka byla uložena.')
       onClose()
     } catch (err: unknown) {
       setError(getErrorMessage(err, 'Chyba při ukládání výpůjčky'))

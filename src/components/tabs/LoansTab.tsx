@@ -20,6 +20,7 @@ import AddIcon from '@mui/icons-material/Add'
 import AssignmentReturnIcon from '@mui/icons-material/AssignmentReturn'
 
 import { useLibraryData } from '../../context/libraryDataContext'
+import { useSnackbar } from '../../context/snackbarContext'
 import type { Loan } from '../../types'
 import { daysOverdue, formatCzDate, formatCzDateTime, formatDaysCz, todayIsoDate } from '../../utils/dates'
 import { getErrorMessage } from '../../utils/errors'
@@ -27,6 +28,7 @@ import { LoanFormDialog } from '../loans/LoanFormDialog'
 
 export function LoansTab() {
   const { loans: loansData, books: booksData, lookups } = useLibraryData()
+  const { showNotification } = useSnackbar()
   const { activeLoans, returnedLoans, loading: loansLoading, errorMessage, setErrorMessage, returnLoan } = loansData
 
   const isLoading = loansLoading || booksData.loading || lookups.loading
@@ -69,6 +71,7 @@ export function LoansTab() {
     try {
       await returnLoan(loanToReturn.id)
       setLoanToReturn(null)
+      showNotification('Kniha byla vrácena a jméno žáka smazáno.')
     } catch (err: unknown) {
       setActionError(getErrorMessage(err, 'Chyba při vracení knihy'))
     } finally {
@@ -252,7 +255,11 @@ export function LoansTab() {
           pageSizeOptions={[10, 25, 50]}
           getRowClassName={({ row }) => (!showHistory && daysOverdue(row.due_date, today) > 0 ? 'loan-overdue' : '')}
           localeText={{
-            noRowsLabel: showHistory ? 'Zatím nejsou žádné vrácené výpůjčky.' : 'Aktuálně nejsou žádné aktivní výpůjčky.',
+            noRowsLabel: search.trim()
+              ? 'Hledání neodpovídá žádná výpůjčka.'
+              : showHistory
+                ? 'Zatím nejsou žádné vrácené výpůjčky.'
+                : 'Aktuálně nejsou žádné aktivní výpůjčky.',
           }}
           sx={{
             border: 'none',

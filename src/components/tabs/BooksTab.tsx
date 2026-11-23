@@ -12,6 +12,7 @@ import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd'
 import { emptyBookForm } from '../../types'
 import type { Book, BookFormData } from '../../types'
 import { useLibraryData } from '../../context/libraryDataContext'
+import { useSnackbar } from '../../context/snackbarContext'
 import { getErrorMessage } from '../../utils/errors'
 import { BookFormDialog } from '../books/BookFormDialog'
 import { DeleteConfirmDialog } from '../books/DeleteConfirmDialog'
@@ -26,6 +27,7 @@ function normalizeSearchText(value: string): string {
 
 export function BooksTab() {
   const { books: booksData, lookups, loans } = useLibraryData()
+  const { showNotification } = useSnackbar()
   const { books, loading: booksLoading, errorMessage, setErrorMessage, saveBook, deleteBook } = booksData
   const {
     types,
@@ -114,6 +116,7 @@ export function BooksTab() {
       await saveBook(cleanData, editingId)
       if (editingId) await fetchLoans()
       setIsFormOpen(false)
+      showNotification(editingId ? 'Kniha byla upravena.' : 'Kniha byla přidána.')
     } catch (err: unknown) {
       setErrorMessage(getErrorMessage(err, 'Chyba při ukládání knihy'))
     } finally {
@@ -126,6 +129,7 @@ export function BooksTab() {
     setErrorMessage(null)
     try {
       await deleteBook(bookToDelete)
+      showNotification('Kniha byla smazána.')
     } catch (err: unknown) {
       setErrorMessage(getErrorMessage(err, 'Chyba při mazání knihy'))
     } finally {
@@ -280,6 +284,11 @@ export function BooksTab() {
           disableRowSelectionOnClick
           initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
           pageSizeOptions={[10, 25, 50]}
+          localeText={{
+            noRowsLabel: deferredSearch.trim()
+              ? 'Hledání neodpovídá žádná kniha.'
+              : 'V katalogu zatím nejsou žádné knihy.',
+          }}
           sx={{ border: 'none' }}
         />
       </Paper>

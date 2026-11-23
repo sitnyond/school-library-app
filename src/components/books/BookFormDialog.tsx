@@ -62,7 +62,7 @@ export function BookFormDialog({
               onInputChange={(_, newValue) => setFormData(prev => ({ ...prev, title: newValue }))}
               renderInput={(params) => <TextField {...params} required label="Název knihy" />}
             />
-            <Stack direction="row" spacing={2}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <Autocomplete
                 freeSolo
                 fullWidth
@@ -83,7 +83,7 @@ export function BookFormDialog({
               />
             </Stack>
 
-            <Stack direction="row" spacing={2}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
                 select
                 required

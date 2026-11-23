@@ -9,6 +9,7 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import { supabase } from '../supabaseClient'
 import { useHashTab } from '../hooks/useHashTab'
 import { LibraryDataProvider } from '../context/LibraryDataProvider'
+import { SnackbarProvider } from '../context/SnackbarProvider'
 import { BooksTab } from './tabs/BooksTab'
 import { LoansTab } from './tabs/LoansTab'
 import { OverviewTab } from './tabs/OverviewTab'
@@ -32,7 +33,8 @@ export function AppShell({ userEmail }: AppShellProps) {
   const [tab, setTab] = useHashTab(TAB_KEYS, 'prehled')
 
   return (
-    <LibraryDataProvider>
+    <SnackbarProvider>
+      <LibraryDataProvider>
       <AppBar position="sticky" color="inherit" elevation={1}>
         <Container maxWidth="xl">
           <Toolbar disableGutters sx={{ gap: 2, flexWrap: 'wrap', py: 1 }}>
@@ -70,6 +72,7 @@ export function AppShell({ userEmail }: AppShellProps) {
           {tab === 'nastaveni' && <SettingsTab />}
         </Box>
       </Container>
-    </LibraryDataProvider>
+      </LibraryDataProvider>
+    </SnackbarProvider>
   )
 }
