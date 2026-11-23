@@ -11,6 +11,7 @@ import { useHashTab } from '../hooks/useHashTab'
 import { LibraryDataProvider } from '../context/LibraryDataProvider'
 import { BooksTab } from './tabs/BooksTab'
 import { PlaceholderTab } from './tabs/PlaceholderTab'
+import { SettingsTab } from './tabs/SettingsTab'
 
 const TAB_KEYS = ['prehled', 'vypujcky', 'knihy', 'nastaveni'] as const
 type TabKey = (typeof TAB_KEYS)[number]
@@ -69,12 +70,7 @@ export function AppShell({ userEmail }: AppShellProps) {
             <PlaceholderTab title="Výpůjčky" description="Správa výpůjček – připravujeme." />
           )}
           {tab === 'knihy' && <BooksTab />}
-          {tab === 'nastaveni' && (
-            <PlaceholderTab
-              title="Nastavení"
-              description="Správa číselníků se sem brzy přesune. Zatím je dostupná tlačítkem „Číselníky“ v záložce Knihy."
-            />
-          )}
+          {tab === 'nastaveni' && <SettingsTab />}
         </Box>
       </Container>
     </LibraryDataProvider>

@@ -7,34 +7,28 @@ import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
-import TuneIcon from '@mui/icons-material/Tune'
 
 import { emptyBookForm } from '../../types'
 import type { Book, BookFormData } from '../../types'
 import { useLibraryData } from '../../context/libraryDataContext'
 import { BookFormDialog } from '../books/BookFormDialog'
 import { DeleteConfirmDialog } from '../books/DeleteConfirmDialog'
-import { CatalogSettingsDialog } from '../CatalogSettingsDialog'
 
 export function BooksTab() {
   const { books: booksData, lookups } = useLibraryData()
-  const { books, loading: booksLoading, errorMessage, setErrorMessage, fetchBooks, saveBook, deleteBook } = booksData
+  const { books, loading: booksLoading, errorMessage, setErrorMessage, saveBook, deleteBook } = booksData
   const {
     types,
     placements,
     loading: lookupsLoading,
     errorMessage: lookupError,
     setErrorMessage: setLookupError,
-    saveLookup,
-    deleteLookup,
-    lookupErrorMessage,
   } = lookups
 
   const isLoading = booksLoading || lookupsLoading
   const [search, setSearch] = useState('')
 
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState<BookFormData>(emptyBookForm)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -193,10 +187,7 @@ export function BooksTab() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <Stack direction="row" spacing={2} sx={{ flexShrink: 0 }}>
-          <Button variant="outlined" disabled={isLoading} startIcon={<TuneIcon />} onClick={() => setIsSettingsOpen(true)}>Číselníky</Button>
-          <Button variant="contained" disabled={isLoading} startIcon={<AddIcon />} onClick={handleOpenAdd}>Přidat knihu</Button>
-        </Stack>
+        <Button variant="contained" disabled={isLoading} startIcon={<AddIcon />} onClick={handleOpenAdd} sx={{ flexShrink: 0 }}>Přidat knihu</Button>
       </Stack>
 
       <Paper elevation={3} sx={{ width: '100%' }}>
@@ -228,22 +219,6 @@ export function BooksTab() {
           setErrorMessage(null)
         }}
         onSubmit={handleSubmit}
-      />
-
-      <CatalogSettingsDialog
-        open={isSettingsOpen}
-        types={types}
-        placements={placements}
-        onClose={() => setIsSettingsOpen(false)}
-        onSave={async (table, name, id) => {
-          await saveLookup(table, name, id)
-          await fetchBooks()
-        }}
-        onDelete={async (table, id) => {
-          await deleteLookup(table, id)
-          await fetchBooks()
-        }}
-        mapError={lookupErrorMessage}
       />
 
       <DeleteConfirmDialog
