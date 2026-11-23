@@ -10,6 +10,7 @@ import { supabase } from '../supabaseClient'
 import { useHashTab } from '../hooks/useHashTab'
 import { LibraryDataProvider } from '../context/LibraryDataProvider'
 import { BooksTab } from './tabs/BooksTab'
+import { LoansTab } from './tabs/LoansTab'
 import { PlaceholderTab } from './tabs/PlaceholderTab'
 import { SettingsTab } from './tabs/SettingsTab'
 
@@ -66,9 +67,7 @@ export function AppShell({ userEmail }: AppShellProps) {
           {tab === 'prehled' && (
             <PlaceholderTab title="Přehled" description="Statistiky, grafy a zpožděné výpůjčky – připravujeme." />
           )}
-          {tab === 'vypujcky' && (
-            <PlaceholderTab title="Výpůjčky" description="Správa výpůjček – připravujeme." />
-          )}
+          {tab === 'vypujcky' && <LoansTab />}
           {tab === 'knihy' && <BooksTab />}
           {tab === 'nastaveni' && <SettingsTab />}
         </Box>
