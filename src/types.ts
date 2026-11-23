@@ -26,6 +26,16 @@ export interface Loan {
   class?: LookupOption | null
 }
 
+export interface LoanFormData {
+  book_id: Book['id']
+  class_id: string
+  borrower_name: string
+  /** Datum ve formátu YYYY-MM-DD */
+  loaned_at: string
+  /** Datum ve formátu YYYY-MM-DD */
+  due_date: string
+}
+
 export interface Book {
   id: string
   title: string

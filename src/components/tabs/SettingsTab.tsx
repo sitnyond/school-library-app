@@ -6,7 +6,7 @@ import { LookupSection } from '../settings/LookupSection'
 import { LoanSettingsSection } from '../settings/LoanSettingsSection'
 
 export function SettingsTab() {
-  const { books, lookups, appSettings } = useLibraryData()
+  const { books, lookups, appSettings, loans } = useLibraryData()
   const { types, placements, classes, saveLookup, deleteLookup, lookupErrorMessage } = lookups
   const [localError, setLocalError] = useState<string | null>(null)
 
@@ -17,11 +17,15 @@ export function SettingsTab() {
     setLocalError(lookupErrorMessage(err, fallback))
   }
 
-  // Po změně číselníku znovu načteme knihy, aby se v katalogu ukázaly nové názvy.
+  // Po změně číselníku znovu načteme navázané záznamy, aby se ukázaly nové názvy.
   const handleSave = async (table: LookupTable, name: string, id?: string) => {
     setLocalError(null)
     await saveLookup(table, name, id)
-    if (table !== 'classes') await books.fetchBooks()
+    if (table === 'classes') {
+      await loans.fetchLoans()
+    } else {
+      await books.fetchBooks()
+    }
   }
 
   const handleDelete = async (table: LookupTable, id: string) => {
