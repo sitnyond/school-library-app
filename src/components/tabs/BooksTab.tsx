@@ -1,12 +1,13 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useDeferredValue, useMemo, useState } from 'react'
 import {
   TextField, Button, Box, Paper, Stack,
-  IconButton, Alert
+  IconButton, Alert, Tooltip, Typography
 } from '@mui/material'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
+import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd'
 
 import { emptyBookForm } from '../../types'
 import type { Book, BookFormData } from '../../types'
@@ -14,9 +15,17 @@ import { useLibraryData } from '../../context/libraryDataContext'
 import { getErrorMessage } from '../../utils/errors'
 import { BookFormDialog } from '../books/BookFormDialog'
 import { DeleteConfirmDialog } from '../books/DeleteConfirmDialog'
+import { LoanFormDialog } from '../loans/LoanFormDialog'
+
+function normalizeSearchText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
 
 export function BooksTab() {
-  const { books: booksData, lookups } = useLibraryData()
+  const { books: booksData, lookups, loans } = useLibraryData()
   const { books, loading: booksLoading, errorMessage, setErrorMessage, saveBook, deleteBook } = booksData
   const {
     types,
@@ -25,9 +34,11 @@ export function BooksTab() {
     errorMessage: lookupError,
     setErrorMessage: setLookupError,
   } = lookups
+  const { getActiveLoanCount, loading: loansLoading, fetchLoans } = loans
 
-  const isLoading = booksLoading || lookupsLoading
+  const isLoading = booksLoading || lookupsLoading || loansLoading
   const [search, setSearch] = useState('')
+  const deferredSearch = useDeferredValue(search)
 
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -36,8 +47,10 @@ export function BooksTab() {
 
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [bookToDelete, setBookToDelete] = useState<string | null>(null)
+  const [loanBookId, setLoanBookId] = useState<Book['id'] | null>(null)
 
   const displayError = errorMessage || lookupError
+  const editingActiveLoans = editingId ? getActiveLoanCount(editingId) : 0
 
   const { uniqueTitles, uniqueAuthors, uniquePublishers } = useMemo(() => {
     return {
@@ -83,6 +96,11 @@ export function BooksTab() {
       return
     }
 
+    if (editingId && formData.quantity < editingActiveLoans) {
+      setErrorMessage(`Počet kusů nemůže být menší než počet aktuálně půjčených kusů (${editingActiveLoans}).`)
+      return
+    }
+
     setIsSubmitting(true)
 
     const cleanData = {
@@ -94,6 +112,7 @@ export function BooksTab() {
 
     try {
       await saveBook(cleanData, editingId)
+      if (editingId) await fetchLoans()
       setIsFormOpen(false)
     } catch (err: unknown) {
       setErrorMessage(getErrorMessage(err, 'Chyba při ukládání knihy'))
@@ -107,27 +126,30 @@ export function BooksTab() {
     setErrorMessage(null)
     try {
       await deleteBook(bookToDelete)
-      setDeleteConfirmOpen(false)
-      setBookToDelete(null)
     } catch (err: unknown) {
       setErrorMessage(getErrorMessage(err, 'Chyba při mazání knihy'))
+    } finally {
+      setDeleteConfirmOpen(false)
+      setBookToDelete(null)
     }
   }
 
+  const searchableBooks = useMemo(() => {
+    return books.map((book) => ({
+      book,
+      searchText: normalizeSearchText(
+        `${book.title} ${book.author ?? ''} ${book.publisher ?? ''} ${book.placement?.name ?? ''} ${book.type?.name ?? ''}`,
+      ),
+    }))
+  }, [books])
+
   const filteredBooks = useMemo(() => {
-    const searchLower = search.toLowerCase()
-    return books.filter(book => {
-      const typeLabel = book.type?.name || ''
-      const placementLabel = book.placement?.name || ''
-      return (
-        book.title.toLowerCase().includes(searchLower) ||
-        (book.author && book.author.toLowerCase().includes(searchLower)) ||
-        (book.publisher && book.publisher.toLowerCase().includes(searchLower)) ||
-        placementLabel.toLowerCase().includes(searchLower) ||
-        typeLabel.toLowerCase().includes(searchLower)
-      )
-    })
-  }, [books, search])
+    const tokens = normalizeSearchText(deferredSearch).trim().split(/\s+/).filter(Boolean)
+    if (tokens.length === 0) return books
+    return searchableBooks
+      .filter(({ searchText }) => tokens.every((token) => searchText.includes(token)))
+      .map(({ book }) => book)
+  }, [books, searchableBooks, deferredSearch])
 
   const columns: GridColDef[] = useMemo(() => [
     { field: 'title', headerName: 'Název', flex: 1.5, minWidth: 200 },
@@ -145,24 +167,82 @@ export function BooksTab() {
       width: 170,
       valueGetter: (_value, row: Book) => row.type?.name ?? '',
     },
-    { field: 'quantity', headerName: 'Kusů', type: 'number', width: 100 },
+    {
+      field: 'availability',
+      headerName: 'Volné / Celkem',
+      type: 'number',
+      width: 135,
+      valueGetter: (_value, row: Book) => Math.max(0, row.quantity - getActiveLoanCount(row.id)),
+      renderCell: (params) => {
+        const row = params.row as Book
+        const available = Math.max(0, row.quantity - getActiveLoanCount(row.id))
+        return (
+          <Typography
+            variant="body2"
+            color={available > 0 ? 'success.main' : 'error.main'}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              height: '100%',
+              width: '100%',
+              fontWeight: 600,
+            }}
+          >
+            {available} / {row.quantity}
+          </Typography>
+        )
+      },
+    },
     {
       field: 'actions',
       headerName: 'Akce',
-      width: 120,
+      width: 145,
       sortable: false,
-      renderCell: (params) => (
-        <Stack direction="row" spacing={1} sx={{ height: '100%', alignItems: 'center' }}>
-          <IconButton size="small" color="primary" disabled={isLoading} onClick={() => handleOpenEdit(params.row as Book)}>
-            <EditIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small" color="error" disabled={isLoading} onClick={() => { setBookToDelete(params.row.id); setDeleteConfirmOpen(true) }}>
-            <DeleteIcon fontSize="small" />
-          </IconButton>
-        </Stack>
-      ),
+      renderCell: (params) => {
+        const row = params.row as Book
+        const available = Math.max(0, row.quantity - getActiveLoanCount(row.id))
+        return (
+          <Stack direction="row" spacing={0.5} sx={{ height: '100%', alignItems: 'center' }}>
+            <Tooltip title={available > 0 ? 'Půjčit knihu' : 'Žádné volné kusy'}>
+              <span>
+                <IconButton
+                  size="small"
+                  color="success"
+                  disabled={isLoading || available <= 0}
+                  onClick={() => setLoanBookId(row.id)}
+                >
+                  <BookmarkAddIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Upravit">
+              <span>
+                <IconButton size="small" color="primary" disabled={isLoading} onClick={() => handleOpenEdit(row)}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Smazat">
+              <span>
+                <IconButton
+                  size="small"
+                  color="error"
+                  disabled={isLoading}
+                  onClick={() => {
+                    setBookToDelete(row.id)
+                    setDeleteConfirmOpen(true)
+                  }}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Stack>
+        )
+      },
     },
-  ], [handleOpenEdit, isLoading])
+  ], [getActiveLoanCount, handleOpenEdit, isLoading])
 
   return (
     <Box>
@@ -209,6 +289,7 @@ export function BooksTab() {
         formData={formData}
         setFormData={setFormData}
         editingId={editingId}
+        activeLoansCount={editingActiveLoans}
         isSubmitting={isSubmitting}
         uniqueTitles={uniqueTitles}
         uniqueAuthors={uniqueAuthors}
@@ -220,6 +301,12 @@ export function BooksTab() {
           setErrorMessage(null)
         }}
         onSubmit={handleSubmit}
+      />
+
+      <LoanFormDialog
+        open={loanBookId !== null}
+        initialBookId={loanBookId}
+        onClose={() => setLoanBookId(null)}
       />
 
       <DeleteConfirmDialog
