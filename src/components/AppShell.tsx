@@ -11,7 +11,7 @@ import { useHashTab } from '../hooks/useHashTab'
 import { LibraryDataProvider } from '../context/LibraryDataProvider'
 import { BooksTab } from './tabs/BooksTab'
 import { LoansTab } from './tabs/LoansTab'
-import { PlaceholderTab } from './tabs/PlaceholderTab'
+import { OverviewTab } from './tabs/OverviewTab'
 import { SettingsTab } from './tabs/SettingsTab'
 
 const TAB_KEYS = ['prehled', 'vypujcky', 'knihy', 'nastaveni'] as const
@@ -64,9 +64,7 @@ export function AppShell({ userEmail }: AppShellProps) {
 
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Box role="tabpanel">
-          {tab === 'prehled' && (
-            <PlaceholderTab title="Přehled" description="Statistiky, grafy a zpožděné výpůjčky – připravujeme." />
-          )}
+          {tab === 'prehled' && <OverviewTab />}
           {tab === 'vypujcky' && <LoansTab />}
           {tab === 'knihy' && <BooksTab />}
           {tab === 'nastaveni' && <SettingsTab />}
