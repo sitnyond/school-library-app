@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   Alert,
   Box,
+  Button,
   Chip,
   LinearProgress,
   MenuItem,
@@ -31,6 +32,7 @@ import {
   getSchoolYearStart,
   todayIsoDate,
 } from '../../utils/dates'
+import { TopBooksDialog, type BookLoanRank } from '../overview/TopBooksDialog'
 
 const MONTH_SHORT_FORMATTER = new Intl.DateTimeFormat('cs-CZ', { month: 'short' })
 
@@ -55,6 +57,7 @@ export function OverviewTab() {
   const today = todayIsoDate()
   const currentSchoolYear = getSchoolYearStart(today)
   const [selectedPeriod, setSelectedPeriod] = useState<'all' | number>(currentSchoolYear)
+  const [topBooksDialogOpen, setTopBooksDialogOpen] = useState(false)
 
   const availableSchoolYears = useMemo(() => {
     const years = new Set<number>([currentSchoolYear])
@@ -150,6 +153,31 @@ export function OverviewTab() {
   }, [selectedPeriod, availableSchoolYears, loans, periodLoans])
 
   const periodLabel = selectedPeriod === 'all' ? 'celkem' : formatSchoolYear(selectedPeriod)
+
+  const allBookRankings = useMemo<BookLoanRank[]>(() => {
+    const counts = new Map<string, number>()
+    for (const loan of periodLoans) {
+      const key = String(loan.book_id)
+      counts.set(key, (counts.get(key) ?? 0) + 1)
+    }
+
+    const items = books.map((book) => ({
+      id: String(book.id),
+      title: book.title,
+      author: book.author,
+      typeName: book.type?.name ?? 'Bez typu',
+      count: counts.get(String(book.id)) ?? 0,
+    }))
+
+    items.sort((a, b) => b.count - a.count || a.title.localeCompare(b.title, 'cs'))
+    return items.map((item, index) => ({ ...item, rank: index + 1 }))
+  }, [books, periodLoans])
+
+  const topBooks = useMemo(
+    () => allBookRankings.filter((item) => item.count > 0).slice(0, 10),
+    [allBookRankings],
+  )
+  const maxBookLoans = topBooks[0]?.count ?? 1
 
   return (
     <Stack spacing={3}>
@@ -359,6 +387,79 @@ export function OverviewTab() {
           series={[{ data: timeChart.counts, label: 'Výpůjčky' }]}
         />
       </Paper>
+
+      <Paper elevation={1} sx={{ p: 3 }}>
+        <Stack direction="row" spacing={2} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
+          <Typography variant="h6">Nejpůjčovanější knihy (TOP 10)</Typography>
+          {books.length > 0 && (
+            <Button size="small" variant="outlined" onClick={() => setTopBooksDialogOpen(true)}>
+              Zobrazit všechny ({books.length})
+            </Button>
+          )}
+        </Stack>
+
+        {topBooks.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            Ve zvoleném období nejsou žádné výpůjčky.
+          </Typography>
+        ) : (
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell width={52}>#</TableCell>
+                  <TableCell>Kniha</TableCell>
+                  <TableCell width={180}>Typ</TableCell>
+                  <TableCell align="right" width={190}>
+                    Výpůjček
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {topBooks.map((item) => (
+                  <TableRow key={item.id} hover>
+                    <TableCell>
+                      <Typography variant="body2" color="text.secondary" sx={{ fontWeight: item.rank <= 3 ? 700 : 400 }}>
+                        {item.rank}.
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">{item.title}</Typography>
+                      {item.author && (
+                        <Typography variant="caption" color="text.secondary">
+                          {item.author}
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell>{item.typeName}</TableCell>
+                    <TableCell align="right">
+                      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', justifyContent: 'flex-end' }}>
+                        <Box sx={{ width: 90, display: { xs: 'none', sm: 'block' } }}>
+                          <LinearProgress
+                            variant="determinate"
+                            value={(item.count / maxBookLoans) * 100}
+                            sx={{ height: 6, borderRadius: 3 }}
+                          />
+                        </Box>
+                        <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 28, textAlign: 'right' }}>
+                          {item.count}
+                        </Typography>
+                      </Stack>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Paper>
+
+      <TopBooksDialog
+        open={topBooksDialogOpen}
+        periodLabel={periodLabel}
+        allBookRankings={allBookRankings}
+        onClose={() => setTopBooksDialogOpen(false)}
+      />
     </Stack>
   )
 }
