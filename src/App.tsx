@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import 'dayjs/locale/cs'
 import { supabase } from './supabaseClient'
 import { csCZ } from '@mui/x-data-grid/locales'
+import { csCZ as pickersCsCZ } from '@mui/x-date-pickers/locales'
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { csCZ as coreCsCZ } from '@mui/material/locale'
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material'
 
@@ -14,6 +18,7 @@ const theme = createTheme(
     palette: { mode: 'light', background: { default: '#f4f6f8' } },
   },
   csCZ,
+  pickersCsCZ,
   coreCsCZ
 )
 
@@ -42,14 +47,16 @@ export default function App() {
 
   return (
     <ThemeProvider theme={theme}>
-      <CssBaseline />
-      {!session ? (
-        <LoginForm />
-      ) : recoveryMode ? (
-        <UpdatePasswordForm onComplete={() => setRecoveryMode(false)} />
-      ) : (
-        <AppShell userEmail={session.user.email || ''} />
-      )}
+      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="cs">
+        <CssBaseline />
+        {!session ? (
+          <LoginForm />
+        ) : recoveryMode ? (
+          <UpdatePasswordForm onComplete={() => setRecoveryMode(false)} />
+        ) : (
+          <AppShell userEmail={session.user.email || ''} />
+        )}
+      </LocalizationProvider>
     </ThemeProvider>
   )
 }

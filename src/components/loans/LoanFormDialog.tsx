@@ -1,4 +1,5 @@
 import { useMemo, useState, type SyntheticEvent } from 'react'
+import dayjs, { type Dayjs } from 'dayjs'
 import {
   Alert,
   Autocomplete,
@@ -13,6 +14,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import { useLibraryData } from '../../context/libraryDataContext'
 import { useSnackbar } from '../../context/snackbarContext'
 import type { Book } from '../../types'
@@ -117,6 +119,10 @@ function LoanFormContent({
       setError('Zadejte prosím jméno žáka.')
       return
     }
+    if (!loanedAt || !dueDate) {
+      setError('Zadejte prosím platné datum půjčení i termín vrácení.')
+      return
+    }
     if (dueDate < loanedAt) {
       setError('Termín vrácení nemůže být dříve než datum půjčení.')
       return
@@ -218,30 +224,33 @@ function LoanFormContent({
           </Stack>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              required
-              fullWidth
-              type="date"
+            <DatePicker
               label="Datum půjčení"
-              value={loanedAt}
-              onChange={(e) => handleLoanedAtChange(e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
+              format="DD.MM.YYYY"
+              value={loanedAt ? dayjs(loanedAt) : null}
+              onChange={(value: Dayjs | null) =>
+                handleLoanedAtChange(value && value.isValid() ? value.format('YYYY-MM-DD') : '')
+              }
+              slotProps={{
+                textField: { required: true, fullWidth: true },
+              }}
             />
-            <TextField
-              required
-              fullWidth
-              type="date"
+            <DatePicker
               label="Termín vrácení"
-              value={dueDate}
-              onChange={(e) => {
-                setDueDate(e.target.value)
+              format="DD.MM.YYYY"
+              value={dueDate ? dayjs(dueDate) : null}
+              minDate={loanedAt ? dayjs(loanedAt) : undefined}
+              onChange={(value: Dayjs | null) => {
+                setDueDate(value && value.isValid() ? value.format('YYYY-MM-DD') : '')
                 setDueDateTouched(true)
               }}
               slotProps={{
-                inputLabel: { shrink: true },
-                htmlInput: { min: loanedAt },
+                textField: {
+                  required: true,
+                  fullWidth: true,
+                  helperText: `Výchozí délka výpůjčky: ${loanDays} dní`,
+                },
               }}
-              helperText={`Výchozí délka výpůjčky: ${loanDays} dní`}
             />
           </Stack>
         </Stack>
