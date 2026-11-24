@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Container, Paper, Typography, Stack, TextField, Button, Link } from '@mui/material'
+import { APP_TITLE } from '../config'
 import { supabase } from '../supabaseClient'
 
 export function LoginForm() {
@@ -39,7 +40,7 @@ export function LoginForm() {
   return (
     <Container maxWidth="sm" sx={{ mt: 10 }}>
       <Paper sx={{ p: 4, elevation: 3, textAlign: 'center' }}>
-        <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}>School library 📚</Typography>
+        <Typography variant="h4" gutterBottom color="primary" sx={{ fontWeight: 'bold' }}>{APP_TITLE} 📚</Typography>
         
         {isResetMode ? (
           <>

@@ -6,6 +6,7 @@ import MenuBookIcon from '@mui/icons-material/MenuBook'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
 
+import { APP_TITLE } from '../config'
 import { supabase } from '../supabaseClient'
 import { useHashTab } from '../hooks/useHashTab'
 import { LibraryDataProvider } from '../context/LibraryDataProvider'
@@ -39,7 +40,7 @@ export function AppShell({ userEmail }: AppShellProps) {
         <Container maxWidth="xl">
           <Toolbar disableGutters sx={{ gap: 2, flexWrap: 'wrap', py: 1 }}>
             <Typography variant="h5" component="h1" color="primary" sx={{ fontWeight: 'bold', flexGrow: 1 }}>
-              School library 📚
+              {APP_TITLE} 📚
             </Typography>
             <Stack direction="row" spacing={2} sx={{ alignItems: 'center' }}>
               <Typography variant="body2" color="textSecondary">
