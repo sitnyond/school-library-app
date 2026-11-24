@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabaseClient'
-import type { Book, Loan, LoanFormData } from '../types'
+import type { Book, Loan, LoanFormData, LoanUpdateData } from '../types'
 import { getErrorMessage } from '../utils/errors'
 
 export function useLoans() {
@@ -110,6 +110,57 @@ export function useLoans() {
     await fetchLoans()
   }
 
+  const extendLoan = async (id: string, dueDate: string) => {
+    if (!dueDate) {
+      throw new Error('Zadejte prosím platný termín vrácení.')
+    }
+    const { error } = await supabase
+      .from('loans')
+      .update({ due_date: dueDate })
+      .eq('id', id)
+      .is('returned_at', null)
+    if (error) throw error
+
+    await fetchLoans()
+  }
+
+  const updateLoan = async (id: string, data: LoanUpdateData) => {
+    const borrowerName = data.borrower_name.trim()
+    if (!borrowerName) {
+      throw new Error('Zadejte prosím jméno žáka.')
+    }
+    if (!data.class_id) {
+      throw new Error('Vyberte prosím třídu.')
+    }
+    if (!data.loaned_at || !data.due_date) {
+      throw new Error('Zadejte prosím platné datum půjčení i termín vrácení.')
+    }
+    if (data.due_date < data.loaned_at) {
+      throw new Error('Termín vrácení nemůže být dříve než datum půjčení.')
+    }
+
+    const { error } = await supabase
+      .from('loans')
+      .update({
+        class_id: data.class_id,
+        borrower_name: borrowerName,
+        loaned_at: data.loaned_at,
+        due_date: data.due_date,
+      })
+      .eq('id', id)
+      .is('returned_at', null)
+    if (error) throw error
+
+    await fetchLoans()
+  }
+
+  const deleteLoan = async (id: string) => {
+    const { error } = await supabase.from('loans').delete().eq('id', id).is('returned_at', null)
+    if (error) throw error
+
+    await fetchLoans()
+  }
+
   return {
     loans,
     activeLoans,
@@ -122,5 +173,8 @@ export function useLoans() {
     fetchLoans,
     createLoan,
     returnLoan,
+    extendLoan,
+    updateLoan,
+    deleteLoan,
   }
 }

@@ -1,30 +1,53 @@
 import { useState } from 'react'
 import { Box, Button, InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material'
+import type { AppSettings } from '../../types'
 
 interface LoanSettingsSectionProps {
   loanDays: number
+  extensionDays: number
   disabled?: boolean
-  onSave: (loanDays: number) => Promise<void>
+  onSave: (settings: AppSettings) => Promise<void>
   onError: (err: unknown, fallback: string) => void
 }
 
-export function LoanSettingsSection({ loanDays, disabled, onSave, onError }: LoanSettingsSectionProps) {
+export function LoanSettingsSection({
+  loanDays,
+  extensionDays,
+  disabled,
+  onSave,
+  onError,
+}: LoanSettingsSectionProps) {
   // null = uživatel zatím nic nezměnil, zobrazuje se hodnota z DB
-  const [draft, setDraft] = useState<string | null>(null)
+  const [loanDaysDraft, setLoanDaysDraft] = useState<string | null>(null)
+  const [extensionDaysDraft, setExtensionDaysDraft] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
-  const value = draft ?? String(loanDays)
-  const parsed = Number.parseInt(value, 10)
-  const isValid = Number.isInteger(parsed) && parsed >= 1 && parsed <= 365
-  const isDirty = draft !== null && parsed !== loanDays
+  const loanValue = loanDaysDraft ?? String(loanDays)
+  const extensionValue = extensionDaysDraft ?? String(extensionDays)
+
+  const parsedLoanDays = Number.parseInt(loanValue, 10)
+  const parsedExtensionDays = Number.parseInt(extensionValue, 10)
+
+  const isLoanValid = Number.isInteger(parsedLoanDays) && parsedLoanDays >= 1 && parsedLoanDays <= 365
+  const isExtensionValid =
+    Number.isInteger(parsedExtensionDays) && parsedExtensionDays >= 1 && parsedExtensionDays <= 365
+  const isValid = isLoanValid && isExtensionValid
+
+  const isDirty =
+    (loanDaysDraft !== null && parsedLoanDays !== loanDays) ||
+    (extensionDaysDraft !== null && parsedExtensionDays !== extensionDays)
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     if (!isValid) return
     setBusy(true)
     try {
-      await onSave(parsed)
-      setDraft(null)
+      await onSave({
+        loan_days: parsedLoanDays,
+        extension_days: parsedExtensionDays,
+      })
+      setLoanDaysDraft(null)
+      setExtensionDaysDraft(null)
     } catch (err: unknown) {
       onError(err, 'Chyba při ukládání nastavení')
     } finally {
@@ -38,16 +61,35 @@ export function LoanSettingsSection({ loanDays, disabled, onSave, onError }: Loa
         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
           Výpůjčky
         </Typography>
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+        <Box
+          component="form"
+          onSubmit={handleSubmit}
+          sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}
+        >
           <TextField
             size="small"
             type="number"
             label="Délka výpůjčky"
-            value={value}
+            value={loanValue}
             disabled={disabled}
-            error={!isValid}
-            helperText={!isValid ? 'Zadejte 1–365 dní' : undefined}
-            onChange={(e) => setDraft(e.target.value)}
+            error={!isLoanValid}
+            helperText={!isLoanValid ? 'Zadejte 1–365 dní' : undefined}
+            onChange={(e) => setLoanDaysDraft(e.target.value)}
+            slotProps={{
+              htmlInput: { min: 1, max: 365 },
+              input: { endAdornment: <InputAdornment position="end">dní</InputAdornment> },
+            }}
+            sx={{ width: 170 }}
+          />
+          <TextField
+            size="small"
+            type="number"
+            label="Délka prodloužení"
+            value={extensionValue}
+            disabled={disabled}
+            error={!isExtensionValid}
+            helperText={!isExtensionValid ? 'Zadejte 1–365 dní' : undefined}
+            onChange={(e) => setExtensionDaysDraft(e.target.value)}
             slotProps={{
               htmlInput: { min: 1, max: 365 },
               input: { endAdornment: <InputAdornment position="end">dní</InputAdornment> },

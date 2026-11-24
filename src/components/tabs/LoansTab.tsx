@@ -9,35 +9,46 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
+  IconButton,
   Paper,
   Stack,
   Switch,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import AddIcon from '@mui/icons-material/Add'
 import AssignmentReturnIcon from '@mui/icons-material/AssignmentReturn'
+import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
+import MoreTimeIcon from '@mui/icons-material/MoreTime'
 
 import { useLibraryData } from '../../context/libraryDataContext'
 import { useSnackbar } from '../../context/snackbarContext'
 import type { Loan } from '../../types'
 import { daysOverdue, formatCzDate, formatCzDateTime, formatDaysCz, todayIsoDate } from '../../utils/dates'
 import { getErrorMessage } from '../../utils/errors'
+import { ExtendLoanDialog } from '../loans/ExtendLoanDialog'
 import { LoanFormDialog } from '../loans/LoanFormDialog'
 
 export function LoansTab() {
   const { loans: loansData, books: booksData, lookups } = useLibraryData()
   const { showNotification } = useSnackbar()
-  const { activeLoans, returnedLoans, loading: loansLoading, errorMessage, setErrorMessage, returnLoan } = loansData
+  const { activeLoans, returnedLoans, loading: loansLoading, errorMessage, setErrorMessage, returnLoan, deleteLoan } =
+    loansData
 
   const isLoading = loansLoading || booksData.loading || lookups.loading
   const [search, setSearch] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [editingLoan, setEditingLoan] = useState<Loan | null>(null)
+  const [loanToExtend, setLoanToExtend] = useState<Loan | null>(null)
 
   const [loanToReturn, setLoanToReturn] = useState<Loan | null>(null)
   const [isReturning, setIsReturning] = useState(false)
+  const [loanToDelete, setLoanToDelete] = useState<Loan | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
   const today = todayIsoDate()
@@ -76,6 +87,22 @@ export function LoansTab() {
       setActionError(getErrorMessage(err, 'Chyba při vracení knihy'))
     } finally {
       setIsReturning(false)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!loanToDelete) return
+    setActionError(null)
+    setIsDeleting(true)
+    try {
+      await deleteLoan(loanToDelete.id)
+      setLoanToDelete(null)
+      showNotification('Výpůjčka byla smazána.')
+    } catch (err: unknown) {
+      setActionError(getErrorMessage(err, 'Chyba při mazání výpůjčky'))
+      setLoanToDelete(null)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -178,19 +205,60 @@ export function LoansTab() {
       baseCols.push({
         field: 'actions',
         headerName: 'Akce',
-        width: 120,
+        width: 215,
         sortable: false,
         renderCell: ({ row }) => (
-          <Button
-            size="small"
-            variant="outlined"
-            color="success"
-            disabled={isLoading}
-            startIcon={<AssignmentReturnIcon fontSize="small" />}
-            onClick={() => setLoanToReturn(row)}
-          >
-            Vrátit
-          </Button>
+          <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+            <Button
+              size="small"
+              variant="outlined"
+              color="success"
+              disabled={isLoading}
+              startIcon={<AssignmentReturnIcon fontSize="small" />}
+              onClick={() => setLoanToReturn(row)}
+            >
+              Vrátit
+            </Button>
+            <Tooltip title="Prodloužit výpůjčku">
+              <span>
+                <IconButton
+                  size="small"
+                  color="info"
+                  disabled={isLoading}
+                  onClick={() => setLoanToExtend(row)}
+                >
+                  <MoreTimeIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Upravit výpůjčku">
+              <span>
+                <IconButton
+                  size="small"
+                  color="primary"
+                  disabled={isLoading}
+                  onClick={() => {
+                    setEditingLoan(row)
+                    setIsFormOpen(true)
+                  }}
+                >
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Smazat chybnou výpůjčku">
+              <span>
+                <IconButton
+                  size="small"
+                  color="error"
+                  disabled={isLoading}
+                  onClick={() => setLoanToDelete(row)}
+                >
+                  <DeleteIcon fontSize="small" />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Stack>
         ),
       })
     }
@@ -236,7 +304,10 @@ export function LoansTab() {
           variant="contained"
           disabled={isLoading}
           startIcon={<AddIcon />}
-          onClick={() => setIsFormOpen(true)}
+          onClick={() => {
+            setEditingLoan(null)
+            setIsFormOpen(true)
+          }}
           sx={{ flexShrink: 0 }}
         >
           Nová výpůjčka
@@ -272,7 +343,16 @@ export function LoansTab() {
         />
       </Paper>
 
-      <LoanFormDialog open={isFormOpen} onClose={() => setIsFormOpen(false)} />
+      <LoanFormDialog
+        open={isFormOpen}
+        editingLoan={editingLoan}
+        onClose={() => {
+          setIsFormOpen(false)
+          setEditingLoan(null)
+        }}
+      />
+
+      <ExtendLoanDialog loan={loanToExtend} onClose={() => setLoanToExtend(null)} />
 
       <Dialog open={Boolean(loanToReturn)} onClose={() => !isReturning && setLoanToReturn(null)} maxWidth="xs" fullWidth>
         <DialogTitle>Potvrdit vrácení knihy?</DialogTitle>
@@ -296,6 +376,33 @@ export function LoansTab() {
           </Button>
           <Button onClick={handleConfirmReturn} color="success" variant="contained" disabled={isReturning}>
             {isReturning ? 'Ukládám...' : 'Vrátit knihu'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(loanToDelete)} onClose={() => !isDeleting && setLoanToDelete(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Smazat chybnou výpůjčku?</DialogTitle>
+        <DialogContent>
+          {loanToDelete && (
+            <Stack spacing={1.5}>
+              <Typography variant="body2">
+                <strong>{loanToDelete.book?.title ?? 'Kniha'}</strong>
+                {loanToDelete.class?.name ? ` (${loanToDelete.class.name})` : ''}
+                {loanToDelete.borrower_name ? ` – ${loanToDelete.borrower_name}` : ''}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Tato akce výpůjčku trvale odstraní bez započítání do statistik. Pokud žák knihu normálně vrátil, použijte
+                tlačítko <strong>Vrátit</strong>.
+              </Typography>
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLoanToDelete(null)} disabled={isDeleting}>
+            Zrušit
+          </Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained" disabled={isDeleting}>
+            {isDeleting ? 'Mažu...' : 'Smazat výpůjčku'}
           </Button>
         </DialogActions>
       </Dialog>

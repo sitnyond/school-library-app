@@ -6,6 +6,8 @@ export interface LookupOption {
 export interface AppSettings {
   /** Výchozí délka výpůjčky ve dnech. */
   loan_days: number
+  /** Výchozí délka prodloužení výpůjčky ve dnech. */
+  extension_days: number
 }
 
 export interface Loan {
@@ -35,6 +37,8 @@ export interface LoanFormData {
   /** Datum ve formátu YYYY-MM-DD */
   due_date: string
 }
+
+export type LoanUpdateData = Omit<LoanFormData, 'book_id'>
 
 export interface Book {
   id: string

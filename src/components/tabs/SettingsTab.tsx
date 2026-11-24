@@ -3,6 +3,7 @@ import { Alert, Box, LinearProgress, Stack } from '@mui/material'
 import { useLibraryData } from '../../context/libraryDataContext'
 import { useSnackbar } from '../../context/snackbarContext'
 import type { LookupTable } from '../../hooks/useLookups'
+import type { AppSettings } from '../../types'
 import { LookupSection } from '../settings/LookupSection'
 import { LoanSettingsSection } from '../settings/LoanSettingsSection'
 
@@ -38,10 +39,10 @@ export function SettingsTab() {
     showNotification('Položka byla smazána.')
   }
 
-  const handleSaveLoanDays = async (loanDays: number) => {
+  const handleSaveLoanSettings = async (settings: AppSettings) => {
     setLocalError(null)
-    await appSettings.saveSettings({ loan_days: loanDays })
-    showNotification('Výchozí délka výpůjčky byla uložena.')
+    await appSettings.saveSettings(settings)
+    showNotification('Nastavení výpůjček bylo uloženo.')
   }
 
   const sectionProps = { onSave: handleSave, onDelete: handleDelete, onError: handleError }
@@ -65,8 +66,9 @@ export function SettingsTab() {
 
       <LoanSettingsSection
         loanDays={appSettings.settings.loan_days}
+        extensionDays={appSettings.settings.extension_days}
         disabled={appSettings.loading}
-        onSave={handleSaveLoanDays}
+        onSave={handleSaveLoanSettings}
         onError={handleError}
       />
 
