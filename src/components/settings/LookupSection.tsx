@@ -53,22 +53,24 @@ export function LookupSection({ title, description, table, items, onSave, onDele
     }, 'Chyba při mazání')
 
   return (
-    <Paper elevation={1} sx={{ p: 3, height: '100%' }}>
-      <Typography variant="h6">{title}</Typography>
+    <Paper elevation={1} sx={{ p: 2 }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+        {title}
+      </Typography>
       {description && (
-        <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>{description}</Typography>
+        <Typography variant="body2" color="textSecondary" sx={{ mb: 1.5 }}>{description}</Typography>
       )}
 
       <Box
         component="form"
         onSubmit={(e) => { e.preventDefault(); handleAdd() }}
-        sx={{ display: 'flex', gap: 1, mb: 2, mt: description ? 0 : 2 }}
+        sx={{ display: 'flex', gap: 1, mb: 1.5, mt: description ? 0 : 1.5 }}
       >
         <TextField size="small" fullWidth label="Nový název" value={newName} onChange={(e) => setNewName(e.target.value)} />
-        <Button type="submit" variant="contained" disabled={busy || !newName.trim()}>Přidat</Button>
+        <Button type="submit" size="small" variant="contained" disabled={busy || !newName.trim()}>Přidat</Button>
       </Box>
 
-      <Stack spacing={1}>
+      <Stack spacing={0.25}>
         {items.length === 0 && (
           <Typography variant="body2" color="textSecondary">Zatím žádné položky.</Typography>
         )}
@@ -78,7 +80,7 @@ export function LookupSection({ title, description, table, items, onSave, onDele
               key={item.id}
               component="form"
               onSubmit={(e) => { e.preventDefault(); handleRename(item.id) }}
-              sx={{ display: 'flex', gap: 1, alignItems: 'center' }}
+              sx={{ display: 'flex', gap: 1, alignItems: 'center', py: 0.25 }}
             >
               <TextField
                 size="small"
@@ -94,8 +96,19 @@ export function LookupSection({ title, description, table, items, onSave, onDele
               </Tooltip>
             </Box>
           ) : (
-            <Stack key={item.id} direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <Typography sx={{ flex: 1 }}>{item.name}</Typography>
+            <Stack
+              key={item.id}
+              direction="row"
+              spacing={0.5}
+              sx={{
+                alignItems: 'center',
+                px: 1,
+                py: 0.25,
+                borderRadius: 1,
+                '&:hover': { bgcolor: 'action.hover' },
+              }}
+            >
+              <Typography variant="body2" sx={{ flex: 1 }}>{item.name}</Typography>
               <Tooltip title="Přejmenovat">
                 <IconButton
                   size="small"

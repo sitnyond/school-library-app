@@ -18,22 +18,29 @@ import MenuBookIcon from '@mui/icons-material/MenuBook'
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
 import HistoryIcon from '@mui/icons-material/History'
-import { BarChart, LineChart, PieChart } from '@mui/x-charts'
+import { BarChart, PieChart } from '@mui/x-charts'
 
 import { useLibraryData } from '../../context/libraryDataContext'
 import { daysOverdue, formatCzDate, formatDaysCz, todayIsoDate } from '../../utils/dates'
 
-const MONTH_FORMATTER = new Intl.DateTimeFormat('cs-CZ', { month: 'short', year: '2-digit' })
+const MONTH_SHORT_FORMATTER = new Intl.DateTimeFormat('cs-CZ', { month: 'short' })
 
-function getRecentMonths(count: number): { key: string; label: string }[] {
+/** Měsíce aktuálního školního roku (září až červen). */
+function getSchoolYearMonths(): { schoolYearLabel: string; months: { key: string; label: string }[] } {
   const now = new Date()
+  const startYear = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1
   const months: { key: string; label: string }[] = []
-  for (let i = count - 1; i >= 0; i--) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+
+  for (let offset = 0; offset < 10; offset++) {
+    const date = new Date(startYear, 8 + offset, 1)
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-    months.push({ key, label: MONTH_FORMATTER.format(date) })
+    months.push({ key, label: MONTH_SHORT_FORMATTER.format(date) })
   }
-  return months
+
+  return {
+    schoolYearLabel: `${startYear}/${startYear + 1}`,
+    months,
+  }
 }
 
 export function OverviewTab() {
@@ -57,6 +64,9 @@ export function OverviewTab() {
 
   const classStats = useMemo(() => {
     const counts = new Map<string, number>()
+    for (const cls of lookups.classes) {
+      counts.set(cls.name, 0)
+    }
     for (const loan of loans) {
       const name = loan.class?.name ?? 'Neznámá'
       counts.set(name, (counts.get(name) ?? 0) + 1)
@@ -66,7 +76,7 @@ export function OverviewTab() {
       labels: entries.map(([label]) => label),
       counts: entries.map(([, count]) => count),
     }
-  }, [loans])
+  }, [lookups.classes, loans])
 
   const typeStats = useMemo(() => {
     const typeByBookId = new Map<string, string>()
@@ -84,7 +94,7 @@ export function OverviewTab() {
   }, [books, loans])
 
   const monthlyStats = useMemo(() => {
-    const months = getRecentMonths(6)
+    const { schoolYearLabel, months } = getSchoolYearMonths()
     const counts = new Map<string, number>(months.map((m) => [m.key, 0]))
     for (const loan of loans) {
       const monthKey = loan.loaned_at.slice(0, 7)
@@ -93,6 +103,7 @@ export function OverviewTab() {
       }
     }
     return {
+      schoolYearLabel,
       labels: months.map((m) => m.label),
       counts: months.map((m) => counts.get(m.key) ?? 0),
     }
@@ -228,12 +239,14 @@ export function OverviewTab() {
           </Typography>
           {classStats.labels.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              Zatím nejsou žádné výpůjčky pro zobrazení grafu.
+              V Nastavení zatím nejsou žádné třídy.
             </Typography>
           ) : (
             <BarChart
-              height={280}
-              xAxis={[{ scaleType: 'band', data: classStats.labels }]}
+              height={300}
+              hideLegend
+              borderRadius={4}
+              xAxis={[{ scaleType: 'band', data: classStats.labels, label: 'Třída', height: 64, tickLabelInterval: () => true }]}
               yAxis={[{ tickMinStep: 1 }]}
               series={[{ data: classStats.counts, label: 'Výpůjčky' }]}
             />
@@ -266,20 +279,16 @@ export function OverviewTab() {
 
       <Paper elevation={1} sx={{ p: 3 }}>
         <Typography variant="h6" sx={{ mb: 1 }}>
-          Trend výpůjček (posledních 6 měsíců)
+          Výpůjčky ve školním roce {monthlyStats.schoolYearLabel} (září–červen)
         </Typography>
-        {loans.length === 0 ? (
-          <Typography variant="body2" color="text.secondary">
-            Zatím nejsou žádné výpůjčky pro zobrazení trendu.
-          </Typography>
-        ) : (
-          <LineChart
-            height={280}
-            xAxis={[{ scaleType: 'point', data: monthlyStats.labels }]}
-            yAxis={[{ tickMinStep: 1 }]}
-            series={[{ data: monthlyStats.counts, label: 'Počet výpůjček', area: true }]}
-          />
-        )}
+        <BarChart
+          height={300}
+          hideLegend
+          borderRadius={4}
+          xAxis={[{ scaleType: 'band', data: monthlyStats.labels, label: 'Měsíc', height: 64, tickLabelInterval: () => true }]}
+          yAxis={[{ tickMinStep: 1 }]}
+          series={[{ data: monthlyStats.counts, label: 'Výpůjčky' }]}
+        />
       </Paper>
     </Stack>
   )

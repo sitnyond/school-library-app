@@ -9,6 +9,7 @@ import {
   Divider,
   InputAdornment,
   Paper,
+  Stack,
   TextField,
   Typography,
 } from '@mui/material'
@@ -34,7 +35,6 @@ export function LoanSettingsSection({
   // null = uživatel zatím nic nezměnil, zobrazuje se hodnota z DB
   const [draft, setDraft] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [saved, setSaved] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [clearing, setClearing] = useState(false)
 
@@ -50,7 +50,6 @@ export function LoanSettingsSection({
     try {
       await onSave(parsed)
       setDraft(null)
-      setSaved(true)
     } catch (err: unknown) {
       onError(err, 'Chyba při ukládání nastavení')
     } finally {
@@ -72,51 +71,55 @@ export function LoanSettingsSection({
   }
 
   return (
-    <Paper elevation={1} sx={{ p: 3, height: '100%' }}>
-      <Typography variant="h6">Výpůjčky</Typography>
-      <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-        Výchozí lhůta pro vrácení. U konkrétní výpůjčky ji půjde upravit.
-      </Typography>
-      <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
-        <TextField
-          size="small"
-          type="number"
-          label="Délka výpůjčky"
-          value={value}
-          disabled={disabled}
-          error={!isValid}
-          helperText={!isValid ? 'Zadejte 1–365 dní' : saved && !isDirty ? 'Uloženo' : ' '}
-          onChange={(e) => { setDraft(e.target.value); setSaved(false) }}
-          slotProps={{
-            htmlInput: { min: 1, max: 365 },
-            input: { endAdornment: <InputAdornment position="end">dní</InputAdornment> },
-          }}
-          sx={{ width: 200 }}
-        />
-        <Button type="submit" variant="contained" disabled={disabled || busy || !isValid || !isDirty}>
-          Uložit
-        </Button>
-      </Box>
-
-      <Divider sx={{ my: 2.5 }} />
-
-      <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-        Historie vrácených výpůjček
-      </Typography>
-      <Typography variant="body2" color="textSecondary" sx={{ mb: 1.5 }}>
-        Vrácené výpůjčky (už anonymizované bez jména) zůstávají pro statistiky. Záznamů v historii:{' '}
-        <strong>{historyCount}</strong>.
-      </Typography>
-      <Button
-        variant="outlined"
-        color="error"
-        size="small"
-        startIcon={<DeleteSweepIcon />}
-        disabled={disabled || busy || clearing || historyCount === 0}
-        onClick={() => setConfirmOpen(true)}
+    <Paper elevation={1} sx={{ px: 2.5, py: 2 }}>
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={2.5}
+        divider={<Divider orientation="vertical" flexItem sx={{ display: { xs: 'none', md: 'block' } }} />}
+        sx={{ alignItems: { md: 'center' }, justifyContent: 'space-between' }}
       >
-        Smazat historii výpůjček
-      </Button>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            Výpůjčky
+          </Typography>
+          <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <TextField
+              size="small"
+              type="number"
+              label="Délka výpůjčky"
+              value={value}
+              disabled={disabled}
+              error={!isValid}
+              helperText={!isValid ? 'Zadejte 1–365 dní' : undefined}
+              onChange={(e) => setDraft(e.target.value)}
+              slotProps={{
+                htmlInput: { min: 1, max: 365 },
+                input: { endAdornment: <InputAdornment position="end">dní</InputAdornment> },
+              }}
+              sx={{ width: 170 }}
+            />
+            <Button type="submit" size="small" variant="contained" disabled={disabled || busy || !isValid || !isDirty}>
+              Uložit
+            </Button>
+          </Box>
+        </Stack>
+
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} sx={{ alignItems: { sm: 'center' } }}>
+          <Typography variant="body2" color="text.secondary">
+            Historie vrácených výpůjček: <strong>{historyCount}</strong>
+          </Typography>
+          <Button
+            variant="outlined"
+            color="error"
+            size="small"
+            startIcon={<DeleteSweepIcon />}
+            disabled={disabled || busy || clearing || historyCount === 0}
+            onClick={() => setConfirmOpen(true)}
+          >
+            Smazat historii
+          </Button>
+        </Stack>
+      </Stack>
 
       <Dialog open={confirmOpen} onClose={() => !clearing && setConfirmOpen(false)} maxWidth="xs" fullWidth>
         <DialogTitle>Smazat historii výpůjček?</DialogTitle>

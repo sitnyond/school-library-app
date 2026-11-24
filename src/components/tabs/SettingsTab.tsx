@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Alert, Box, LinearProgress, Stack, Typography } from '@mui/material'
+import { Alert, Box, LinearProgress, Stack } from '@mui/material'
 import { useLibraryData } from '../../context/libraryDataContext'
 import { useSnackbar } from '../../context/snackbarContext'
 import type { LookupTable } from '../../hooks/useLookups'
@@ -53,12 +53,7 @@ export function SettingsTab() {
   const sectionProps = { onSave: handleSave, onDelete: handleDelete, onError: handleError }
 
   return (
-    <Stack spacing={3}>
-      <Box>
-        <Typography variant="h5">Nastavení</Typography>
-        <Typography variant="body2" color="textSecondary">Číselníky a parametry výpůjček.</Typography>
-      </Box>
-
+    <Stack spacing={2}>
       {loading && <LinearProgress />}
 
       {displayError && (
@@ -75,32 +70,30 @@ export function SettingsTab() {
         </Alert>
       )}
 
-      <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
-        <LoanSettingsSection
-          loanDays={appSettings.settings.loan_days}
-          historyCount={loans.returnedLoans.length}
-          disabled={appSettings.loading || loans.loading}
-          onSave={handleSaveLoanDays}
-          onClearHistory={handleClearHistory}
-          onError={handleError}
-        />
+      <LoanSettingsSection
+        loanDays={appSettings.settings.loan_days}
+        historyCount={loans.returnedLoans.length}
+        disabled={appSettings.loading || loans.loading}
+        onSave={handleSaveLoanDays}
+        onClearHistory={handleClearHistory}
+        onError={handleError}
+      />
+
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, alignItems: 'start' }}>
         <LookupSection
           title="Třídy"
-          description="Při půjčení se vybírá třída a píše jen zkrácené jméno žáka."
           table="classes"
           items={classes}
           {...sectionProps}
         />
         <LookupSection
           title="Typy knih"
-          description="Např. beletrie, odborná literatura, časopis."
           table="book_types"
           items={types}
           {...sectionProps}
         />
         <LookupSection
           title="Umístění"
-          description="Regály nebo místa, kde jsou knihy uložené."
           table="placements"
           items={placements}
           {...sectionProps}
