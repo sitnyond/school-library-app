@@ -110,13 +110,6 @@ export function useLoans() {
     await fetchLoans()
   }
 
-  const clearLoanHistory = async () => {
-    const { error } = await supabase.from('loans').delete().not('returned_at', 'is', null)
-    if (error) throw error
-
-    await fetchLoans()
-  }
-
   return {
     loans,
     activeLoans,
@@ -129,6 +122,5 @@ export function useLoans() {
     fetchLoans,
     createLoan,
     returnLoan,
-    clearLoanHistory,
   }
 }

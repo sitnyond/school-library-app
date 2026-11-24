@@ -63,3 +63,14 @@ export function formatDaysCz(days: number): string {
   if (days >= 2 && days <= 4) return `${days} dny`
   return `${days} dní`
 }
+
+/** Vrátí počáteční rok školního roku (září–srpen) pro datum YYYY-MM-DD. */
+export function getSchoolYearStart(isoDate: string = todayIsoDate()): number {
+  const [year, month] = isoDate.split('-').map(Number)
+  return month >= 9 ? year : year - 1
+}
+
+/** Formátuje školní rok, např. 2026 -> "2026/2027". */
+export function formatSchoolYear(startYear: number): string {
+  return `${startYear}/${startYear + 1}`
+}

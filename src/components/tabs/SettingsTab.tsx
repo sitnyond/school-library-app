@@ -12,8 +12,8 @@ export function SettingsTab() {
   const { types, placements, classes, saveLookup, deleteLookup, lookupErrorMessage } = lookups
   const [localError, setLocalError] = useState<string | null>(null)
 
-  const loading = lookups.loading || appSettings.loading || loans.loading
-  const displayError = localError || lookups.errorMessage || appSettings.errorMessage || loans.errorMessage
+  const loading = lookups.loading || appSettings.loading
+  const displayError = localError || lookups.errorMessage || appSettings.errorMessage
 
   const handleError = (err: unknown, fallback: string) => {
     setLocalError(lookupErrorMessage(err, fallback))
@@ -44,12 +44,6 @@ export function SettingsTab() {
     showNotification('Výchozí délka výpůjčky byla uložena.')
   }
 
-  const handleClearHistory = async () => {
-    setLocalError(null)
-    await loans.clearLoanHistory()
-    showNotification('Historie vrácených výpůjček byla smazána.')
-  }
-
   const sectionProps = { onSave: handleSave, onDelete: handleDelete, onError: handleError }
 
   return (
@@ -63,7 +57,6 @@ export function SettingsTab() {
             setLocalError(null)
             lookups.setErrorMessage(null)
             appSettings.setErrorMessage(null)
-            loans.setErrorMessage(null)
           }}
         >
           {displayError}
@@ -72,10 +65,8 @@ export function SettingsTab() {
 
       <LoanSettingsSection
         loanDays={appSettings.settings.loan_days}
-        historyCount={loans.returnedLoans.length}
-        disabled={appSettings.loading || loans.loading}
+        disabled={appSettings.loading}
         onSave={handleSaveLoanDays}
-        onClearHistory={handleClearHistory}
         onError={handleError}
       />
 

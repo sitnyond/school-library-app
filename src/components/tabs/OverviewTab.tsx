@@ -1,9 +1,10 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Alert,
   Box,
   Chip,
   LinearProgress,
+  MenuItem,
   Paper,
   Stack,
   Table,
@@ -12,6 +13,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Typography,
 } from '@mui/material'
 import MenuBookIcon from '@mui/icons-material/MenuBook'
@@ -21,36 +23,58 @@ import HistoryIcon from '@mui/icons-material/History'
 import { BarChart, PieChart } from '@mui/x-charts'
 
 import { useLibraryData } from '../../context/libraryDataContext'
-import { daysOverdue, formatCzDate, formatDaysCz, todayIsoDate } from '../../utils/dates'
+import {
+  daysOverdue,
+  formatCzDate,
+  formatDaysCz,
+  formatSchoolYear,
+  getSchoolYearStart,
+  todayIsoDate,
+} from '../../utils/dates'
 
 const MONTH_SHORT_FORMATTER = new Intl.DateTimeFormat('cs-CZ', { month: 'short' })
 
-/** Měsíce aktuálního školního roku (září až červen). */
-function getSchoolYearMonths(): { schoolYearLabel: string; months: { key: string; label: string }[] } {
-  const now = new Date()
-  const startYear = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1
+/** Měsíce zvoleného školního roku (září až červen). */
+function getSchoolYearMonths(startYear: number): { key: string; label: string }[] {
   const months: { key: string; label: string }[] = []
-
   for (let offset = 0; offset < 10; offset++) {
     const date = new Date(startYear, 8 + offset, 1)
     const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
     months.push({ key, label: MONTH_SHORT_FORMATTER.format(date) })
   }
-
-  return {
-    schoolYearLabel: `${startYear}/${startYear + 1}`,
-    months,
-  }
+  return months
 }
 
 export function OverviewTab() {
   const { books: booksData, loans: loansData, lookups } = useLibraryData()
   const { books, loading: booksLoading, errorMessage: booksError } = booksData
-  const { loans, activeLoans, returnedLoans, loading: loansLoading, errorMessage: loansError } = loansData
+  const { loans, activeLoans, loading: loansLoading, errorMessage: loansError } = loansData
 
   const loading = booksLoading || loansLoading || lookups.loading
   const displayError = loansError || booksError || lookups.errorMessage
   const today = todayIsoDate()
+  const currentSchoolYear = getSchoolYearStart(today)
+  const [selectedPeriod, setSelectedPeriod] = useState<'all' | number>(currentSchoolYear)
+
+  const availableSchoolYears = useMemo(() => {
+    const years = new Set<number>([currentSchoolYear])
+    for (const loan of loans) {
+      if (loan.loaned_at) {
+        years.add(getSchoolYearStart(loan.loaned_at))
+      }
+    }
+    return Array.from(years).sort((a, b) => b - a)
+  }, [loans, currentSchoolYear])
+
+  const periodLoans = useMemo(() => {
+    if (selectedPeriod === 'all') return loans
+    return loans.filter((loan) => getSchoolYearStart(loan.loaned_at) === selectedPeriod)
+  }, [loans, selectedPeriod])
+
+  const returnedInPeriod = useMemo(
+    () => periodLoans.filter((loan) => loan.returned_at !== null).length,
+    [periodLoans],
+  )
 
   const totalCopies = useMemo(() => books.reduce((sum, book) => sum + book.quantity, 0), [books])
   const availableCopies = Math.max(0, totalCopies - activeLoans.length)
@@ -67,7 +91,7 @@ export function OverviewTab() {
     for (const cls of lookups.classes) {
       counts.set(cls.name, 0)
     }
-    for (const loan of loans) {
+    for (const loan of periodLoans) {
       const name = loan.class?.name ?? 'Neznámá'
       counts.set(name, (counts.get(name) ?? 0) + 1)
     }
@@ -76,7 +100,7 @@ export function OverviewTab() {
       labels: entries.map(([label]) => label),
       counts: entries.map(([, count]) => count),
     }
-  }, [lookups.classes, loans])
+  }, [lookups.classes, periodLoans])
 
   const typeStats = useMemo(() => {
     const typeByBookId = new Map<string, string>()
@@ -84,30 +108,48 @@ export function OverviewTab() {
       typeByBookId.set(String(book.id), book.type?.name ?? 'Bez typu')
     }
     const counts = new Map<string, number>()
-    for (const loan of loans) {
+    for (const loan of periodLoans) {
       const typeName = typeByBookId.get(String(loan.book_id)) ?? 'Bez typu'
       counts.set(typeName, (counts.get(typeName) ?? 0) + 1)
     }
     return Array.from(counts.entries())
       .sort((a, b) => b[1] - a[1])
       .map(([label, value], id) => ({ id, label, value }))
-  }, [books, loans])
+  }, [books, periodLoans])
 
-  const monthlyStats = useMemo(() => {
-    const { schoolYearLabel, months } = getSchoolYearMonths()
+  const timeChart = useMemo(() => {
+    if (selectedPeriod === 'all') {
+      const yearsAsc = [...availableSchoolYears].sort((a, b) => a - b)
+      const counts = new Map<number, number>(yearsAsc.map((y) => [y, 0]))
+      for (const loan of loans) {
+        const y = getSchoolYearStart(loan.loaned_at)
+        counts.set(y, (counts.get(y) ?? 0) + 1)
+      }
+      return {
+        title: 'Výpůjčky podle školních roků',
+        axisLabel: 'Školní rok',
+        labels: yearsAsc.map((y) => formatSchoolYear(y)),
+        counts: yearsAsc.map((y) => counts.get(y) ?? 0),
+      }
+    }
+
+    const months = getSchoolYearMonths(selectedPeriod)
     const counts = new Map<string, number>(months.map((m) => [m.key, 0]))
-    for (const loan of loans) {
+    for (const loan of periodLoans) {
       const monthKey = loan.loaned_at.slice(0, 7)
       if (counts.has(monthKey)) {
         counts.set(monthKey, (counts.get(monthKey) ?? 0) + 1)
       }
     }
     return {
-      schoolYearLabel,
+      title: `Výpůjčky ve školním roce ${formatSchoolYear(selectedPeriod)} (září–červen)`,
+      axisLabel: 'Měsíc',
       labels: months.map((m) => m.label),
       counts: months.map((m) => counts.get(m.key) ?? 0),
     }
-  }, [loans])
+  }, [selectedPeriod, availableSchoolYears, loans, periodLoans])
+
+  const periodLabel = selectedPeriod === 'all' ? 'celkem' : formatSchoolYear(selectedPeriod)
 
   return (
     <Stack spacing={3}>
@@ -175,14 +217,14 @@ export function OverviewTab() {
           <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 1 }}>
             <HistoryIcon color="action" />
             <Typography variant="subtitle2" color="text.secondary">
-              Celkem výpůjček
+              Výpůjčky ({periodLabel})
             </Typography>
           </Stack>
           <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            {loans.length}
+            {periodLoans.length}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            vráceno v historii: {returnedLoans.length}
+            vráceno: {returnedInPeriod}
           </Typography>
         </Paper>
       </Box>
@@ -232,6 +274,33 @@ export function OverviewTab() {
         )}
       </Paper>
 
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between', pt: 1 }}
+      >
+        <Typography variant="h6">Statistiky výpůjček</Typography>
+        <TextField
+          select
+          size="small"
+          label="Školní rok"
+          value={selectedPeriod === 'all' ? 'all' : String(selectedPeriod)}
+          onChange={(e) => {
+            const val = e.target.value
+            setSelectedPeriod(val === 'all' ? 'all' : Number(val))
+          }}
+          sx={{ minWidth: 220, background: 'white' }}
+        >
+          {availableSchoolYears.map((year) => (
+            <MenuItem key={year} value={String(year)}>
+              {formatSchoolYear(year)}
+              {year === currentSchoolYear ? ' (aktuální)' : ''}
+            </MenuItem>
+          ))}
+          <MenuItem value="all">Všechny roky</MenuItem>
+        </TextField>
+      </Stack>
+
       <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' } }}>
         <Paper elevation={1} sx={{ p: 3 }}>
           <Typography variant="h6" sx={{ mb: 1 }}>
@@ -259,11 +328,11 @@ export function OverviewTab() {
           </Typography>
           {typeStats.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
-              Zatím nejsou žádné výpůjčky pro zobrazení grafu.
+              Ve zvoleném období nejsou žádné výpůjčky.
             </Typography>
           ) : (
             <PieChart
-              height={280}
+              height={300}
               series={[
                 {
                   data: typeStats,
@@ -279,15 +348,15 @@ export function OverviewTab() {
 
       <Paper elevation={1} sx={{ p: 3 }}>
         <Typography variant="h6" sx={{ mb: 1 }}>
-          Výpůjčky ve školním roce {monthlyStats.schoolYearLabel} (září–červen)
+          {timeChart.title}
         </Typography>
         <BarChart
           height={300}
           hideLegend
           borderRadius={4}
-          xAxis={[{ scaleType: 'band', data: monthlyStats.labels, label: 'Měsíc', height: 64, tickLabelInterval: () => true }]}
+          xAxis={[{ scaleType: 'band', data: timeChart.labels, label: timeChart.axisLabel, height: 64, tickLabelInterval: () => true }]}
           yAxis={[{ tickMinStep: 1 }]}
-          series={[{ data: monthlyStats.counts, label: 'Výpůjčky' }]}
+          series={[{ data: timeChart.counts, label: 'Výpůjčky' }]}
         />
       </Paper>
     </Stack>
