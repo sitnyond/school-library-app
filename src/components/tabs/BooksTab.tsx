@@ -1,13 +1,15 @@
 import { useCallback, useDeferredValue, useMemo, useState } from 'react'
 import {
   TextField, Button, Box, Paper, Stack,
-  IconButton, Alert, Tooltip, Typography
+  IconButton, InputAdornment, Alert, Tooltip, Typography
 } from '@mui/material'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
+import CloseIcon from '@mui/icons-material/Close'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
 import BookmarkAddIcon from '@mui/icons-material/BookmarkAdd'
+import SearchIcon from '@mui/icons-material/Search'
 
 import { emptyBookForm } from '../../types'
 import type { Book, BookFormData } from '../../types'
@@ -47,8 +49,7 @@ export function BooksTab() {
   const [formData, setFormData] = useState<BookFormData>(emptyBookForm)
   const [editingId, setEditingId] = useState<string | null>(null)
 
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [bookToDelete, setBookToDelete] = useState<string | null>(null)
+  const [bookToDelete, setBookToDelete] = useState<Book | null>(null)
   const [loanBookId, setLoanBookId] = useState<Book['id'] | null>(null)
 
   const displayError = errorMessage || lookupError
@@ -128,12 +129,11 @@ export function BooksTab() {
     if (!bookToDelete) return
     setErrorMessage(null)
     try {
-      await deleteBook(bookToDelete)
+      await deleteBook(bookToDelete.id)
       showNotification('Kniha byla smazána.')
     } catch (err: unknown) {
       setErrorMessage(getErrorMessage(err, 'Chyba při mazání knihy'))
     } finally {
-      setDeleteConfirmOpen(false)
       setBookToDelete(null)
     }
   }
@@ -233,10 +233,7 @@ export function BooksTab() {
                   size="small"
                   color="error"
                   disabled={isLoading}
-                  onClick={() => {
-                    setBookToDelete(row.id)
-                    setDeleteConfirmOpen(true)
-                  }}
+                  onClick={() => setBookToDelete(row)}
                 >
                   <DeleteIcon fontSize="small" />
                 </IconButton>
@@ -263,14 +260,31 @@ export function BooksTab() {
         </Alert>
       )}
 
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3, alignItems: { md: 'center' } }}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2, alignItems: { md: 'center' } }}>
         <TextField
+          size="small"
           fullWidth
-          label="🔍 Hledat knihu (podle názvu, autora, nakladatele, umístění nebo typu)..."
+          placeholder="Hledat knihu (podle názvu, autora, nakladatele, umístění nebo typu)..."
           variant="outlined"
           sx={{ background: 'white' }}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+              endAdornment: search ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" aria-label="Vymazat hledání" onClick={() => setSearch('')}>
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ) : undefined,
+            },
+          }}
         />
         <Button variant="contained" disabled={isLoading} startIcon={<AddIcon />} onClick={handleOpenAdd} sx={{ flexShrink: 0 }}>Přidat knihu</Button>
       </Stack>
@@ -282,7 +296,7 @@ export function BooksTab() {
           columns={columns}
           loading={isLoading}
           disableRowSelectionOnClick
-          initialState={{ pagination: { paginationModel: { pageSize: 10 } } }}
+          initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
           pageSizeOptions={[10, 25, 50]}
           localeText={{
             noRowsLabel: deferredSearch.trim()
@@ -319,8 +333,10 @@ export function BooksTab() {
       />
 
       <DeleteConfirmDialog
-        open={deleteConfirmOpen}
-        onClose={() => setDeleteConfirmOpen(false)}
+        open={Boolean(bookToDelete)}
+        bookTitle={bookToDelete?.title}
+        bookAuthor={bookToDelete?.author}
+        onClose={() => setBookToDelete(null)}
         onConfirm={confirmDelete}
       />
     </Box>

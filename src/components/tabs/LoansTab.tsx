@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useState } from 'react'
 import {
   Alert,
   Box,
@@ -8,21 +8,24 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControlLabel,
   IconButton,
+  InputAdornment,
   Paper,
   Stack,
-  Switch,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from '@mui/material'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import AddIcon from '@mui/icons-material/Add'
 import AssignmentReturnIcon from '@mui/icons-material/AssignmentReturn'
+import CloseIcon from '@mui/icons-material/Close'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import MoreTimeIcon from '@mui/icons-material/MoreTime'
+import SearchIcon from '@mui/icons-material/Search'
 
 import { useLibraryData } from '../../context/libraryDataContext'
 import { useSnackbar } from '../../context/snackbarContext'
@@ -32,6 +35,13 @@ import { getErrorMessage } from '../../utils/errors'
 import { ExtendLoanDialog } from '../loans/ExtendLoanDialog'
 import { LoanFormDialog } from '../loans/LoanFormDialog'
 
+function normalizeSearchText(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
 export function LoansTab() {
   const { loans: loansData, books: booksData, lookups } = useLibraryData()
   const { showNotification } = useSnackbar()
@@ -40,6 +50,7 @@ export function LoansTab() {
 
   const isLoading = loansLoading || booksData.loading || lookups.loading
   const [search, setSearch] = useState('')
+  const deferredSearch = useDeferredValue(search)
   const [showHistory, setShowHistory] = useState(false)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null)
@@ -54,26 +65,31 @@ export function LoansTab() {
   const today = todayIsoDate()
   const displayError = actionError || errorMessage
 
-  const sourceLoans = showHistory ? returnedLoans : activeLoans
+  const sortedLoans = useMemo(() => {
+    if (showHistory) {
+      return [...returnedLoans].sort((a, b) => (b.returned_at ?? '').localeCompare(a.returned_at ?? ''))
+    }
+    return [...activeLoans].sort(
+      (a, b) => a.due_date.localeCompare(b.due_date) || a.loaned_at.localeCompare(b.loaned_at),
+    )
+  }, [activeLoans, returnedLoans, showHistory])
+
+  const searchableLoans = useMemo(() => {
+    return sortedLoans.map((loan) => ({
+      loan,
+      searchText: normalizeSearchText(
+        `${loan.book?.title ?? ''} ${loan.book?.author ?? ''} ${loan.class?.name ?? ''} ${loan.borrower_name ?? ''} ${loan.created_by_email ?? ''}`,
+      ),
+    }))
+  }, [sortedLoans])
 
   const filteredLoans = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    if (!query) return sourceLoans
-    return sourceLoans.filter((loan) => {
-      const title = loan.book?.title?.toLowerCase() ?? ''
-      const author = loan.book?.author?.toLowerCase() ?? ''
-      const className = loan.class?.name?.toLowerCase() ?? ''
-      const borrower = loan.borrower_name?.toLowerCase() ?? ''
-      const createdBy = loan.created_by_email?.toLowerCase() ?? ''
-      return (
-        title.includes(query) ||
-        author.includes(query) ||
-        className.includes(query) ||
-        borrower.includes(query) ||
-        createdBy.includes(query)
-      )
-    })
-  }, [sourceLoans, search])
+    const tokens = normalizeSearchText(deferredSearch).trim().split(/\s+/).filter(Boolean)
+    if (tokens.length === 0) return sortedLoans
+    return searchableLoans
+      .filter(({ searchText }) => tokens.every((token) => searchText.includes(token)))
+      .map(({ loan }) => loan)
+  }, [sortedLoans, searchableLoans, deferredSearch])
 
   const handleConfirmReturn = async () => {
     if (!loanToReturn) return
@@ -85,6 +101,7 @@ export function LoansTab() {
       showNotification('Kniha byla vrácena a jméno žáka smazáno.')
     } catch (err: unknown) {
       setActionError(getErrorMessage(err, 'Chyba při vracení knihy'))
+      setLoanToReturn(null)
     } finally {
       setIsReturning(false)
     }
@@ -281,25 +298,45 @@ export function LoansTab() {
         </Alert>
       )}
 
-      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 3, alignItems: { md: 'center' } }}>
+      <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2, alignItems: { md: 'center' } }}>
         <TextField
+          size="small"
           fullWidth
-          label="🔍 Hledat výpůjčku (kniha, autor, třída, žák, učitel)..."
+          placeholder="Hledat výpůjčku (kniha, autor, třída, žák, učitel)..."
           variant="outlined"
           sx={{ background: 'white' }}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+              endAdornment: search ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" aria-label="Vymazat hledání" onClick={() => setSearch('')}>
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ) : undefined,
+            },
+          }}
         />
-        <FormControlLabel
-          sx={{ flexShrink: 0, ml: { md: 1 } }}
-          control={
-            <Switch
-              checked={showHistory}
-              onChange={(_, checked) => setShowHistory(checked)}
-            />
-          }
-          label={`Zobrazit historii (${returnedLoans.length})`}
-        />
+        <ToggleButtonGroup
+          size="small"
+          exclusive
+          color="primary"
+          value={showHistory ? 'history' : 'active'}
+          onChange={(_, value: 'active' | 'history' | null) => {
+            if (value !== null) setShowHistory(value === 'history')
+          }}
+          sx={{ bgcolor: 'white', flexShrink: 0 }}
+        >
+          <ToggleButton value="active">Aktivní</ToggleButton>
+          <ToggleButton value="history">Historie</ToggleButton>
+        </ToggleButtonGroup>
         <Button
           variant="contained"
           disabled={isLoading}
@@ -326,7 +363,7 @@ export function LoansTab() {
           pageSizeOptions={[10, 25, 50]}
           getRowClassName={({ row }) => (!showHistory && daysOverdue(row.due_date, today) > 0 ? 'loan-overdue' : '')}
           localeText={{
-            noRowsLabel: search.trim()
+            noRowsLabel: deferredSearch.trim()
               ? 'Hledání neodpovídá žádná výpůjčka.'
               : showHistory
                 ? 'Zatím nejsou žádné vrácené výpůjčky.'
@@ -391,8 +428,7 @@ export function LoansTab() {
                 {loanToDelete.borrower_name ? ` – ${loanToDelete.borrower_name}` : ''}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Tato akce výpůjčku trvale odstraní bez započítání do statistik. Pokud žák knihu normálně vrátil, použijte
-                tlačítko <strong>Vrátit</strong>.
+                Tato akce výpůjčku trvale odstraní bez započítání do statistik.
               </Typography>
             </Stack>
           )}
