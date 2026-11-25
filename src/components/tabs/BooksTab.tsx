@@ -16,16 +16,10 @@ import type { Book, BookFormData } from '../../types'
 import { useLibraryData } from '../../context/libraryDataContext'
 import { useSnackbar } from '../../context/snackbarContext'
 import { getErrorMessage } from '../../utils/errors'
+import { normalizeSearchText, tokenizeSearch } from '../../utils/search'
 import { BookFormDialog } from '../books/BookFormDialog'
 import { DeleteConfirmDialog } from '../books/DeleteConfirmDialog'
 import { LoanFormDialog } from '../loans/LoanFormDialog'
-
-function normalizeSearchText(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-}
 
 export function BooksTab() {
   const { books: booksData, lookups, loans } = useLibraryData()
@@ -148,7 +142,7 @@ export function BooksTab() {
   }, [books])
 
   const filteredBooks = useMemo(() => {
-    const tokens = normalizeSearchText(deferredSearch).trim().split(/\s+/).filter(Boolean)
+    const tokens = tokenizeSearch(deferredSearch)
     if (tokens.length === 0) return books
     return searchableBooks
       .filter(({ searchText }) => tokens.every((token) => searchText.includes(token)))

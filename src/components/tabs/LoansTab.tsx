@@ -32,15 +32,9 @@ import { useSnackbar } from '../../context/snackbarContext'
 import type { Loan } from '../../types'
 import { daysOverdue, formatCzDate, formatCzDateTime, formatDaysCz, todayIsoDate } from '../../utils/dates'
 import { getErrorMessage } from '../../utils/errors'
+import { normalizeSearchText, tokenizeSearch } from '../../utils/search'
 import { ExtendLoanDialog } from '../loans/ExtendLoanDialog'
 import { LoanFormDialog } from '../loans/LoanFormDialog'
-
-function normalizeSearchText(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-}
 
 export function LoansTab() {
   const { loans: loansData, books: booksData, lookups } = useLibraryData()
@@ -84,7 +78,7 @@ export function LoansTab() {
   }, [sortedLoans])
 
   const filteredLoans = useMemo(() => {
-    const tokens = normalizeSearchText(deferredSearch).trim().split(/\s+/).filter(Boolean)
+    const tokens = tokenizeSearch(deferredSearch)
     if (tokens.length === 0) return sortedLoans
     return searchableLoans
       .filter(({ searchText }) => tokens.every((token) => searchText.includes(token)))

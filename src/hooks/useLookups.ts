@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import type { LookupOption } from '../types'
+import { getErrorMessage } from '../utils/errors'
 
 export type LookupTable = 'book_types' | 'placements' | 'classes'
 
@@ -9,21 +10,6 @@ const usage: Record<LookupTable, { table: 'books' | 'loans'; column: string; mes
   book_types: { table: 'books', column: 'type_id', message: 'Nelze smazat: tento typ používá alespoň jedna kniha.' },
   placements: { table: 'books', column: 'placement_id', message: 'Nelze smazat: toto umístění používá alespoň jedna kniha.' },
   classes: { table: 'loans', column: 'class_id', message: 'Nelze smazat: k této třídě existují výpůjčky (i v historii).' },
-}
-
-function lookupErrorMessage(err: unknown, fallback: string) {
-  if (err && typeof err === 'object' && 'code' in err) {
-    const code = (err as { code?: string }).code
-    if (code === '23503') {
-      return 'Nelze smazat: položka se stále používá.'
-    }
-    if (code === '23505') {
-      return 'Položka s tímto názvem už existuje.'
-    }
-  }
-  if (err instanceof Error && err.message) return err.message
-  if (err && typeof err === 'object' && 'message' in err) return String((err as { message: unknown }).message)
-  return fallback
 }
 
 function sortLookups(items: LookupOption[] | null): LookupOption[] {
@@ -52,7 +38,7 @@ export function useLookups() {
       setPlacements(sortLookups(placementsResult.data))
       setClasses(sortLookups(classesResult.data))
     } catch (err: unknown) {
-      setErrorMessage(lookupErrorMessage(err, 'Chyba při načítání číselníků'))
+      setErrorMessage(getErrorMessage(err, 'Chyba při načítání číselníků'))
     } finally {
       setLoading(false)
     }
@@ -102,6 +88,5 @@ export function useLookups() {
     fetchLookups,
     saveLookup,
     deleteLookup,
-    lookupErrorMessage,
   }
 }

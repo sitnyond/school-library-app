@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import type { AppSettings } from '../types'
 
-export const DEFAULT_APP_SETTINGS: AppSettings = { loan_days: 30, extension_days: 30 }
+const DEFAULT_APP_SETTINGS: AppSettings = { loan_days: 30, extension_days: 30 }
 
 /** Nastavení aplikace – jediný řádek v tabulce app_settings. */
 export function useAppSettings() {

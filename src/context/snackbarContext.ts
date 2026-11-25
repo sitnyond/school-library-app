@@ -1,7 +1,7 @@
 import { createContext, useContext } from 'react'
 import type { AlertColor } from '@mui/material'
 
-export interface SnackbarContextValue {
+interface SnackbarContextValue {
   showNotification: (message: string, severity?: AlertColor) => void
 }
 

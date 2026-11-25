@@ -4,7 +4,7 @@ import type { useLookups } from '../hooks/useLookups'
 import type { useAppSettings } from '../hooks/useAppSettings'
 import type { useLoans } from '../hooks/useLoans'
 
-export interface LibraryData {
+interface LibraryData {
   books: ReturnType<typeof useBooks>
   lookups: ReturnType<typeof useLookups>
   appSettings: ReturnType<typeof useAppSettings>

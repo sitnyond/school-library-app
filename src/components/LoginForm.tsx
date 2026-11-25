@@ -71,103 +71,73 @@ export function LoginForm() {
             {APP_TITLE} 📚
           </Typography>
 
-          {isResetMode ? (
-            <>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Zadejte svůj e-mail, zašleme vám odkaz pro vytvoření nového hesla.
-              </Typography>
-              <form onSubmit={handleResetPassword}>
-                <Stack spacing={2.5}>
-                  <TextField
-                    label="E-mail"
-                    type="email"
-                    autoComplete="email"
-                    autoFocus
-                    required
-                    fullWidth
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                  {statusMsg.text && (
-                    <Alert severity={statusMsg.type} sx={{ textAlign: 'left' }}>
-                      {statusMsg.text}
-                    </Alert>
-                  )}
-                  <Button type="submit" variant="contained" size="large" disabled={isLoading}>
-                    {isLoading ? 'Odesílám...' : 'Odeslat odkaz'}
-                  </Button>
-                  <Link
-                    component="button"
-                    type="button"
-                    variant="body2"
-                    onClick={() => switchMode(false)}
-                  >
-                    Zpět na přihlášení
-                  </Link>
-                </Stack>
-              </form>
-            </>
-          ) : (
-            <>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Pro vstup do systému se prosím přihlaste.
-              </Typography>
-              <form onSubmit={handleLogin}>
-                <Stack spacing={2.5}>
-                  <TextField
-                    label="E-mail"
-                    type="email"
-                    autoComplete="email"
-                    autoFocus
-                    required
-                    fullWidth
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                  <TextField
-                    label="Heslo"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    required
-                    fullWidth
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    slotProps={{
-                      input: {
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <IconButton
-                              edge="end"
-                              aria-label={showPassword ? 'Skrýt heslo' : 'Zobrazit heslo'}
-                              onClick={() => setShowPassword((prev) => !prev)}
-                            >
-                              {showPassword ? <VisibilityOff /> : <Visibility />}
-                            </IconButton>
-                          </InputAdornment>
-                        ),
-                      },
-                    }}
-                  />
-                  {statusMsg.text && (
-                    <Alert severity={statusMsg.type} sx={{ textAlign: 'left' }}>
-                      {statusMsg.text}
-                    </Alert>
-                  )}
-                  <Button type="submit" variant="contained" size="large" disabled={isLoading}>
-                    {isLoading ? 'Přihlašuji...' : 'Přihlásit se'}
-                  </Button>
-                  <Link
-                    component="button"
-                    type="button"
-                    variant="body2"
-                    onClick={() => switchMode(true)}
-                  >
-                    Zapomenuté heslo?
-                  </Link>
-                </Stack>
-              </form>
-            </>
-          )}
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            {isResetMode
+              ? 'Zadejte svůj e-mail, zašleme vám odkaz pro vytvoření nového hesla.'
+              : 'Pro vstup do systému se prosím přihlaste.'}
+          </Typography>
+          <form onSubmit={isResetMode ? handleResetPassword : handleLogin}>
+            <Stack spacing={2.5}>
+              <TextField
+                label="E-mail"
+                type="email"
+                autoComplete="email"
+                autoFocus
+                required
+                fullWidth
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+              {!isResetMode && (
+                <TextField
+                  label="Heslo"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  fullWidth
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  slotProps={{
+                    input: {
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            edge="end"
+                            aria-label={showPassword ? 'Skrýt heslo' : 'Zobrazit heslo'}
+                            onClick={() => setShowPassword((prev) => !prev)}
+                          >
+                            {showPassword ? <VisibilityOff /> : <Visibility />}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    },
+                  }}
+                />
+              )}
+              {statusMsg.text && (
+                <Alert severity={statusMsg.type} sx={{ textAlign: 'left' }}>
+                  {statusMsg.text}
+                </Alert>
+              )}
+              <Button type="submit" variant="contained" size="large" disabled={isLoading}>
+                {isLoading
+                  ? isResetMode
+                    ? 'Odesílám...'
+                    : 'Přihlašuji...'
+                  : isResetMode
+                    ? 'Odeslat odkaz'
+                    : 'Přihlásit se'}
+              </Button>
+              <Link
+                component="button"
+                type="button"
+                variant="body2"
+                onClick={() => switchMode(!isResetMode)}
+              >
+                {isResetMode ? 'Zpět na přihlášení' : 'Zapomenuté heslo?'}
+              </Link>
+            </Stack>
+          </form>
         </Paper>
       </Container>
     </Box>

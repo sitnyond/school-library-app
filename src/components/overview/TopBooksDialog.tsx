@@ -13,6 +13,7 @@ import {
   Typography,
 } from '@mui/material'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
+import { normalizeSearchText, tokenizeSearch } from '../../utils/search'
 
 export interface BookLoanRank {
   id: string
@@ -28,13 +29,6 @@ interface TopBooksDialogProps {
   periodLabel: string
   allBookRankings: BookLoanRank[]
   onClose: () => void
-}
-
-function normalizeSearchText(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
 }
 
 const COLUMNS: GridColDef<BookLoanRank>[] = [
@@ -118,7 +112,7 @@ function TopBooksDialogContent({
   }, [allBookRankings])
 
   const filteredRows = useMemo(() => {
-    const tokens = normalizeSearchText(deferredSearch).trim().split(/\s+/).filter(Boolean)
+    const tokens = tokenizeSearch(deferredSearch)
     return searchableRows
       .filter(({ item, searchText }) => {
         if (!includeUnborrowed && item.count === 0) return false

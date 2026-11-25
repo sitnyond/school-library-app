@@ -20,6 +20,7 @@ import { useSnackbar } from '../../context/snackbarContext'
 import type { Book, Loan } from '../../types'
 import { addDaysIsoDate, todayIsoDate } from '../../utils/dates'
 import { getErrorMessage } from '../../utils/errors'
+import { normalizeSearchText, tokenizeSearch } from '../../utils/search'
 
 interface LoanFormDialogProps {
   open: boolean
@@ -35,13 +36,6 @@ interface BookOption extends Book {
 }
 
 const MAX_AUTOCOMPLETE_OPTIONS = 25
-
-function normalizeSearchText(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-}
 
 function LoanFormContent({
   initialBookId,
@@ -87,7 +81,7 @@ function LoanFormContent({
 
   const filterBooks = useMemo(() => {
     return (options: BookOption[], { inputValue }: { inputValue: string }) => {
-      const tokens = normalizeSearchText(inputValue).trim().split(/\s+/).filter(Boolean)
+      const tokens = tokenizeSearch(inputValue)
       if (tokens.length === 0) {
         return options.slice(0, MAX_AUTOCOMPLETE_OPTIONS)
       }

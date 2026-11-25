@@ -19,7 +19,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import type { LookupOption } from '../../types'
 import type { LookupTable } from '../../hooks/useLookups'
 
-export interface LookupSectionProps {
+interface LookupSectionProps {
   title: string
   description?: string
   table: LookupTable

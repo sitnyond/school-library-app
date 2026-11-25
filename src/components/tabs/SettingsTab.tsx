@@ -4,20 +4,21 @@ import { useLibraryData } from '../../context/libraryDataContext'
 import { useSnackbar } from '../../context/snackbarContext'
 import type { LookupTable } from '../../hooks/useLookups'
 import type { AppSettings } from '../../types'
+import { getErrorMessage } from '../../utils/errors'
 import { LookupSection } from '../settings/LookupSection'
 import { LoanSettingsSection } from '../settings/LoanSettingsSection'
 
 export function SettingsTab() {
   const { books, lookups, appSettings, loans } = useLibraryData()
   const { showNotification } = useSnackbar()
-  const { types, placements, classes, saveLookup, deleteLookup, lookupErrorMessage } = lookups
+  const { types, placements, classes, saveLookup, deleteLookup } = lookups
   const [localError, setLocalError] = useState<string | null>(null)
 
   const loading = lookups.loading || appSettings.loading
   const displayError = localError || lookups.errorMessage || appSettings.errorMessage
 
   const handleError = (err: unknown, fallback: string) => {
-    setLocalError(lookupErrorMessage(err, fallback))
+    setLocalError(getErrorMessage(err, fallback))
   }
 
   // Po změně číselníku znovu načteme navázané záznamy, aby se ukázaly nové názvy.

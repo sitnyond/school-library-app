@@ -1,30 +1,19 @@
+import dayjs from 'dayjs'
+
 /** Vrátí dnešní lokální datum ve formátu YYYY-MM-DD. */
 export function todayIsoDate(): string {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  const d = String(now.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
+  return dayjs().format('YYYY-MM-DD')
 }
 
 /** Přičte zadaný počet dní k datu YYYY-MM-DD a vrátí YYYY-MM-DD. */
 export function addDaysIsoDate(isoDate: string, days: number): string {
-  const [y, m, d] = isoDate.split('-').map(Number)
-  const date = new Date(y, m - 1, d + days)
-  const ry = date.getFullYear()
-  const rm = String(date.getMonth() + 1).padStart(2, '0')
-  const rd = String(date.getDate()).padStart(2, '0')
-  return `${ry}-${rm}-${rd}`
+  return dayjs(isoDate).add(days, 'day').format('YYYY-MM-DD')
 }
 
 /** Počet dní po termínu (0, pokud ještě není po termínu). */
 export function daysOverdue(dueDate: string, referenceIso: string = todayIsoDate()): number {
   if (!dueDate || dueDate >= referenceIso) return 0
-  const [dy, dm, dd] = dueDate.split('-').map(Number)
-  const [ry, rm, rd] = referenceIso.split('-').map(Number)
-  const dueUtc = Date.UTC(dy, dm - 1, dd)
-  const refUtc = Date.UTC(ry, rm - 1, rd)
-  return Math.max(0, Math.round((refUtc - dueUtc) / 86_400_000))
+  return Math.max(0, dayjs(referenceIso).diff(dayjs(dueDate), 'day'))
 }
 
 /** Formátuje datum YYYY-MM-DD nebo ISO timestamp do českého formátu (např. 23. 11. 2026). */
