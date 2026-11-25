@@ -1,32 +1,45 @@
-# React + TypeScript + Vite
+# School Library App
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+A web application for managing a school library — book catalog, student loans, overview statistics, and library settings. Built with React, TypeScript, Material UI, and Supabase (Czech UI).
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Book catalog** – add, edit, delete, and search books with copy counts and live availability.
+- **Loan management** – lend, edit, extend, and return books with overdue tracking. Borrower names are automatically cleared upon return for privacy (GDPR).
+- **Overview & statistics** – KPI summary, overdue alerts, loan charts by school year, and top-borrowed book rankings.
+- **Admin settings** – manage classes, book types, placements, and default loan/extension durations (restricted to users with the `admin` role).
+- **Authentication** – email/password sign-in and password recovery via Supabase Auth.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Frontend:** React 19, TypeScript, Vite, Material UI (`@mui/material`, `@mui/x-data-grid`, `@mui/x-charts`, `@mui/x-date-pickers`)
+- **Backend:** Supabase (PostgreSQL + Auth)
+- **Linting:** Oxlint
 
-## Expanding the Oxlint configuration
+## Getting Started
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
+2. Create `.env.local` from `.env.example` and fill in your Supabase credentials:
+   ```env
+   VITE_SUPABASE_URL=https://your-project.supabase.co
+   VITE_SUPABASE_ANON_KEY=your-anon-key
+   VITE_APP_TITLE=School library
+   ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+3. Apply the SQL migrations from `sql/` to your Supabase database in numbered order.
+
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+## Scripts
+
+- `npm run dev` – start local dev server
+- `npm run build` – type-check and build for production
+- `npm run preview` – preview the production build locally
+- `npm run lint` – run Oxlint
