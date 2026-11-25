@@ -365,7 +365,7 @@ export function LoansTab() {
                 {loanToReturn.borrower_name ? ` – ${loanToReturn.borrower_name}` : ''}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Po potvrzení vrácení se jméno žáka trvale smaže (GDPR). V historii zůstane jen kniha, třída a data výpůjčky.
+                Po potvrzení vrácení se jméno žáka trvale smaže. V historii zůstane jen kniha, třída a data výpůjčky.
               </Typography>
             </Stack>
           )}
