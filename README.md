@@ -30,7 +30,7 @@ A web application for managing a school library — book catalog, student loans,
    VITE_APP_TITLE=School library
    ```
 
-3. Apply the SQL migrations from `sql/` to your Supabase database in numbered order.
+3. Run [`sql/init.sql`](sql/init.sql) in the Supabase SQL Editor to create the database schema and RLS policies.
 
 4. Start the development server:
    ```bash
@@ -44,3 +44,21 @@ A web application for managing a school library — book catalog, student loans,
 - `npm run preview` – preview the production build locally
 - `npm run lint` – run Oxlint
 - `npm test` – run unit tests (Vitest)
+
+## Database
+
+Add admin account by running:
+```sql
+update auth.users
+set raw_app_meta_data = coalesce(raw_app_meta_data, '{}'::jsonb) || '{"role": "admin"}'::jsonb
+where email = 'admin@skola.cz';
+```
+
+Delete admin account by running:
+```sql
+update auth.users
+set raw_app_meta_data = raw_app_meta_data - 'role'
+where email = 'admin@skola.cz';
+```
+
+> Note: After changing a user's role, the user must sign out and sign back in for the new role to take effect.
