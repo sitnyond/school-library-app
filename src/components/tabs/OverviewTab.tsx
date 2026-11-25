@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   Chip,
+  Divider,
   LinearProgress,
   MenuItem,
   Paper,
@@ -17,10 +18,10 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import LibraryBooksIcon from '@mui/icons-material/LibraryBooks'
 import MenuBookIcon from '@mui/icons-material/MenuBook'
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz'
 import WarningAmberIcon from '@mui/icons-material/WarningAmber'
-import HistoryIcon from '@mui/icons-material/History'
 import { BarChart, PieChart } from '@mui/x-charts'
 
 import { useLibraryData } from '../../context/libraryDataContext'
@@ -80,7 +81,6 @@ export function OverviewTab() {
   )
 
   const totalCopies = useMemo(() => books.reduce((sum, book) => sum + book.quantity, 0), [books])
-  const availableCopies = Math.max(0, totalCopies - activeLoans.length)
 
   const overdueLoans = useMemo(() => {
     return activeLoans
@@ -193,38 +193,44 @@ export function OverviewTab() {
         }}
       >
         <Paper elevation={1} sx={{ p: 2.5 }}>
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 1 }}>
-            <MenuBookIcon color="primary" />
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
+            <MenuBookIcon color="primary" fontSize="small" />
             <Typography variant="subtitle2" color="text.secondary">
-              Katalog knih
+              Počet titulů
             </Typography>
           </Stack>
           <Typography variant="h4" sx={{ fontWeight: 700 }}>
             {books.length}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            titulů · celkem {totalCopies} kusů
+        </Paper>
+
+        <Paper elevation={1} sx={{ p: 2.5 }}>
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
+            <LibraryBooksIcon color="primary" fontSize="small" />
+            <Typography variant="subtitle2" color="text.secondary">
+              Počet kusů
+            </Typography>
+          </Stack>
+          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+            {totalCopies}
           </Typography>
         </Paper>
 
         <Paper elevation={1} sx={{ p: 2.5 }}>
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 1 }}>
-            <SwapHorizIcon color="info" />
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
+            <SwapHorizIcon color="info" fontSize="small" />
             <Typography variant="subtitle2" color="text.secondary">
               Aktuálně půjčeno
             </Typography>
           </Stack>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
+          <Typography variant="h4" color="info.main" sx={{ fontWeight: 700 }}>
             {activeLoans.length}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            volných kusů: {availableCopies}
           </Typography>
         </Paper>
 
         <Paper elevation={1} sx={{ p: 2.5 }}>
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 1 }}>
-            <WarningAmberIcon color={overdueLoans.length > 0 ? 'error' : 'success'} />
+          <Stack direction="row" spacing={1} sx={{ alignItems: 'center', mb: 1.5 }}>
+            <WarningAmberIcon color={overdueLoans.length > 0 ? 'error' : 'success'} fontSize="small" />
             <Typography variant="subtitle2" color="text.secondary">
               Po termínu
             </Typography>
@@ -235,24 +241,6 @@ export function OverviewTab() {
             sx={{ fontWeight: 700 }}
           >
             {overdueLoans.length}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {overdueLoans.length > 0 ? 'vyžaduje upomínku' : 'vše v termínu'}
-          </Typography>
-        </Paper>
-
-        <Paper elevation={1} sx={{ p: 2.5 }}>
-          <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center', mb: 1 }}>
-            <HistoryIcon color="action" />
-            <Typography variant="subtitle2" color="text.secondary">
-              Výpůjčky ({periodLabel})
-            </Typography>
-          </Stack>
-          <Typography variant="h4" sx={{ fontWeight: 700 }}>
-            {periodLoans.length}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            vráceno: {returnedInPeriod}
           </Typography>
         </Paper>
       </Box>
@@ -302,12 +290,19 @@ export function OverviewTab() {
         )}
       </Paper>
 
+      <Divider />
+
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
         spacing={2}
-        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between', pt: 1 }}
+        sx={{ alignItems: { sm: 'center' }, justifyContent: 'space-between' }}
       >
-        <Typography variant="h6">Statistiky výpůjček</Typography>
+        <Box>
+          <Typography variant="h6">Statistiky výpůjček</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Výpůjček ({periodLabel}): <strong>{periodLoans.length}</strong> · vráceno: {returnedInPeriod}
+          </Typography>
+        </Box>
         <TextField
           select
           size="small"
@@ -390,7 +385,7 @@ export function OverviewTab() {
 
       <Paper elevation={1} sx={{ p: 3 }}>
         <Stack direction="row" spacing={2} sx={{ alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-          <Typography variant="h6">Nejpůjčovanější knihy (TOP 10)</Typography>
+          <Typography variant="h6">Nejpůjčovanější knihy</Typography>
           {books.length > 0 && (
             <Button size="small" variant="outlined" onClick={() => setTopBooksDialogOpen(true)}>
               Zobrazit všechny ({books.length})
