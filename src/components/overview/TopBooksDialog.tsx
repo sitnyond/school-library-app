@@ -14,15 +14,9 @@ import {
 } from '@mui/material'
 import { DataGrid, type GridColDef } from '@mui/x-data-grid'
 import { normalizeSearchText, tokenizeSearch } from '../../utils/search'
+import type { BookLoanRank } from '../../utils/overviewStats'
 
-export interface BookLoanRank {
-  id: string
-  rank: number
-  title: string
-  author: string | null
-  typeName: string
-  count: number
-}
+export type { BookLoanRank }
 
 interface TopBooksDialogProps {
   open: boolean

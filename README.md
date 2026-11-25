@@ -43,3 +43,4 @@ A web application for managing a school library — book catalog, student loans,
 - `npm run build` – type-check and build for production
 - `npm run preview` – preview the production build locally
 - `npm run lint` – run Oxlint
+- `npm test` – run unit tests (Vitest)

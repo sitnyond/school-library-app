@@ -36,7 +36,6 @@ import { useLibraryData } from '../../context/libraryDataContext'
 import { useSnackbar } from '../../context/snackbarContext'
 import type { Loan } from '../../types'
 import {
-  daysOverdue,
   formatCzDate,
   formatDaysCz,
   formatSchoolYear,
@@ -44,21 +43,17 @@ import {
   todayIsoDate,
 } from '../../utils/dates'
 import { getErrorMessage } from '../../utils/errors'
+import {
+  computeBookRankings,
+  computeClassStats,
+  computeTimeChart,
+  computeTypeStats,
+  filterLoansByPeriod,
+  getAvailableSchoolYears,
+  getOverdueLoans,
+} from '../../utils/overviewStats'
 import { ExtendLoanDialog } from '../loans/ExtendLoanDialog'
-import { TopBooksDialog, type BookLoanRank } from '../overview/TopBooksDialog'
-
-const MONTH_SHORT_FORMATTER = new Intl.DateTimeFormat('cs-CZ', { month: 'short' })
-
-/** Měsíce zvoleného školního roku (září až červen). */
-function getSchoolYearMonths(startYear: number): { key: string; label: string }[] {
-  const months: { key: string; label: string }[] = []
-  for (let offset = 0; offset < 10; offset++) {
-    const date = new Date(startYear, 8 + offset, 1)
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
-    months.push({ key, label: MONTH_SHORT_FORMATTER.format(date) })
-  }
-  return months
-}
+import { TopBooksDialog } from '../overview/TopBooksDialog'
 
 export function OverviewTab() {
   const { books: booksData, loans: loansData, lookups } = useLibraryData()
@@ -93,20 +88,15 @@ export function OverviewTab() {
     }
   }
 
-  const availableSchoolYears = useMemo(() => {
-    const years = new Set<number>([currentSchoolYear])
-    for (const loan of loans) {
-      if (loan.loaned_at) {
-        years.add(getSchoolYearStart(loan.loaned_at))
-      }
-    }
-    return Array.from(years).sort((a, b) => b - a)
-  }, [loans, currentSchoolYear])
+  const availableSchoolYears = useMemo(
+    () => getAvailableSchoolYears(loans, currentSchoolYear),
+    [loans, currentSchoolYear],
+  )
 
-  const periodLoans = useMemo(() => {
-    if (selectedPeriod === 'all') return loans
-    return loans.filter((loan) => getSchoolYearStart(loan.loaned_at) === selectedPeriod)
-  }, [loans, selectedPeriod])
+  const periodLoans = useMemo(
+    () => filterLoansByPeriod(loans, selectedPeriod),
+    [loans, selectedPeriod],
+  )
 
   const returnedInPeriod = useMemo(
     () => periodLoans.filter((loan) => loan.returned_at !== null).length,
@@ -115,98 +105,26 @@ export function OverviewTab() {
 
   const totalCopies = useMemo(() => books.reduce((sum, book) => sum + book.quantity, 0), [books])
 
-  const overdueLoans = useMemo(() => {
-    return activeLoans
-      .map((loan) => ({ loan, overdueDays: daysOverdue(loan.due_date, today) }))
-      .filter((item) => item.overdueDays > 0)
-      .sort((a, b) => b.overdueDays - a.overdueDays)
-  }, [activeLoans, today])
+  const overdueLoans = useMemo(() => getOverdueLoans(activeLoans, today), [activeLoans, today])
 
-  const classStats = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const cls of lookups.classes) {
-      counts.set(cls.name, 0)
-    }
-    for (const loan of periodLoans) {
-      const name = loan.class?.name ?? 'Neznámá'
-      counts.set(name, (counts.get(name) ?? 0) + 1)
-    }
-    const entries = Array.from(counts.entries()).sort((a, b) =>
-      a[0].localeCompare(b[0], 'cs', { numeric: true }),
-    )
-    return {
-      labels: entries.map(([label]) => label),
-      counts: entries.map(([, count]) => count),
-    }
-  }, [lookups.classes, periodLoans])
+  const classStats = useMemo(
+    () => computeClassStats(lookups.classes, periodLoans),
+    [lookups.classes, periodLoans],
+  )
 
-  const typeStats = useMemo(() => {
-    const typeByBookId = new Map<string, string>()
-    for (const book of books) {
-      typeByBookId.set(String(book.id), book.type?.name ?? 'Bez typu')
-    }
-    const counts = new Map<string, number>()
-    for (const loan of periodLoans) {
-      const typeName = typeByBookId.get(String(loan.book_id)) ?? 'Bez typu'
-      counts.set(typeName, (counts.get(typeName) ?? 0) + 1)
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([label, value], id) => ({ id, label, value }))
-  }, [books, periodLoans])
+  const typeStats = useMemo(() => computeTypeStats(books, periodLoans), [books, periodLoans])
 
-  const timeChart = useMemo(() => {
-    if (selectedPeriod === 'all') {
-      const yearsAsc = [...availableSchoolYears].sort((a, b) => a - b)
-      const counts = new Map<number, number>(yearsAsc.map((y) => [y, 0]))
-      for (const loan of loans) {
-        const y = getSchoolYearStart(loan.loaned_at)
-        counts.set(y, (counts.get(y) ?? 0) + 1)
-      }
-      return {
-        title: 'Výpůjčky podle školních roků',
-        axisLabel: 'Školní rok',
-        labels: yearsAsc.map((y) => formatSchoolYear(y)),
-        counts: yearsAsc.map((y) => counts.get(y) ?? 0),
-      }
-    }
-
-    const months = getSchoolYearMonths(selectedPeriod)
-    const counts = new Map<string, number>(months.map((m) => [m.key, 0]))
-    for (const loan of periodLoans) {
-      const monthKey = loan.loaned_at.slice(0, 7)
-      if (counts.has(monthKey)) {
-        counts.set(monthKey, (counts.get(monthKey) ?? 0) + 1)
-      }
-    }
-    return {
-      title: `Výpůjčky ve školním roce ${formatSchoolYear(selectedPeriod)} (září–červen)`,
-      axisLabel: 'Měsíc',
-      labels: months.map((m) => m.label),
-      counts: months.map((m) => counts.get(m.key) ?? 0),
-    }
-  }, [selectedPeriod, availableSchoolYears, loans, periodLoans])
+  const timeChart = useMemo(
+    () => computeTimeChart(selectedPeriod, availableSchoolYears, loans, periodLoans),
+    [selectedPeriod, availableSchoolYears, loans, periodLoans],
+  )
 
   const periodLabel = selectedPeriod === 'all' ? 'celkem' : formatSchoolYear(selectedPeriod)
 
-  const allBookRankings = useMemo<BookLoanRank[]>(() => {
-    const counts = new Map<string, number>()
-    for (const loan of periodLoans) {
-      const key = String(loan.book_id)
-      counts.set(key, (counts.get(key) ?? 0) + 1)
-    }
-
-    const items = books.map((book) => ({
-      id: String(book.id),
-      title: book.title,
-      author: book.author,
-      typeName: book.type?.name ?? 'Bez typu',
-      count: counts.get(String(book.id)) ?? 0,
-    }))
-
-    items.sort((a, b) => b.count - a.count || a.title.localeCompare(b.title, 'cs'))
-    return items.map((item, index) => ({ ...item, rank: index + 1 }))
-  }, [books, periodLoans])
+  const allBookRankings = useMemo(
+    () => computeBookRankings(books, periodLoans),
+    [books, periodLoans],
+  )
 
   const topBooks = useMemo(
     () => allBookRankings.filter((item) => item.count > 0).slice(0, 10),
