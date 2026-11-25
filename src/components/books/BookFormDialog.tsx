@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction, SyntheticEvent } from 'react'
 import {
   Autocomplete,
   Button,
+  createFilterOptions,
   Dialog,
   DialogActions,
   DialogContent,
@@ -10,13 +11,16 @@ import {
   Stack,
   TextField,
 } from '@mui/material'
-import type { BookFormData, LookupOption } from '../types'
+import type { BookFormData, LookupOption } from '../../types'
+
+const filterStringOptions = createFilterOptions<string>({ limit: 25, trim: true })
 
 interface BookFormDialogProps {
   open: boolean
   formData: BookFormData
   setFormData: Dispatch<SetStateAction<BookFormData>>
   editingId: string | null
+  activeLoansCount?: number
   isSubmitting: boolean
   uniqueTitles: string[]
   uniqueAuthors: string[]
@@ -32,6 +36,7 @@ export function BookFormDialog({
   formData,
   setFormData,
   editingId,
+  activeLoansCount = 0,
   isSubmitting,
   uniqueTitles,
   uniqueAuthors,
@@ -41,6 +46,7 @@ export function BookFormDialog({
   onClose,
   onSubmit,
 }: BookFormDialogProps) {
+  const minQuantity = Math.max(1, activeLoansCount)
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <form onSubmit={onSubmit}>
@@ -51,15 +57,17 @@ export function BookFormDialog({
               freeSolo
               fullWidth
               options={uniqueTitles}
+              filterOptions={filterStringOptions}
               value={formData.title}
               onInputChange={(_, newValue) => setFormData(prev => ({ ...prev, title: newValue }))}
               renderInput={(params) => <TextField {...params} required label="Název knihy" />}
             />
-            <Stack direction="row" spacing={2}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <Autocomplete
                 freeSolo
                 fullWidth
                 options={uniqueAuthors}
+                filterOptions={filterStringOptions}
                 value={formData.author}
                 onInputChange={(_, newValue) => setFormData(prev => ({ ...prev, author: newValue }))}
                 renderInput={(params) => <TextField {...params} label="Autor" />}
@@ -68,13 +76,14 @@ export function BookFormDialog({
                 freeSolo
                 fullWidth
                 options={uniquePublishers}
+                filterOptions={filterStringOptions}
                 value={formData.publisher}
                 onInputChange={(_, newValue) => setFormData(prev => ({ ...prev, publisher: newValue }))}
                 renderInput={(params) => <TextField {...params} label="Nakladatel" />}
               />
             </Stack>
 
-            <Stack direction="row" spacing={2}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
                 select
                 required
@@ -105,11 +114,21 @@ export function BookFormDialog({
             <TextField
               required
               type="number"
-              label="Kusů"
-              sx={{ width: '150px' }}
-              slotProps={{ htmlInput: { min: 1 } }}
+              label="Kusů celkem"
+              sx={{ width: activeLoansCount > 0 ? '260px' : '150px' }}
+              slotProps={{ htmlInput: { min: minQuantity } }}
               value={formData.quantity}
-              onChange={(e) => setFormData(prev => ({ ...prev, quantity: Math.max(1, parseInt(e.target.value, 10) || 1) }))}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  quantity: Math.max(minQuantity, parseInt(e.target.value, 10) || minQuantity),
+                }))
+              }
+              helperText={
+                activeLoansCount > 0
+                  ? `Aktuálně půjčeno: ${activeLoansCount} ks (nelze snížit níž).`
+                  : undefined
+              }
             />
           </Stack>
         </DialogContent>
