@@ -26,6 +26,10 @@ function lookupErrorMessage(err: unknown, fallback: string) {
   return fallback
 }
 
+function sortLookups(items: LookupOption[] | null): LookupOption[] {
+  return [...(items || [])].sort((a, b) => a.name.localeCompare(b.name, 'cs', { numeric: true }))
+}
+
 export function useLookups() {
   const [types, setTypes] = useState<LookupOption[]>([])
   const [placements, setPlacements] = useState<LookupOption[]>([])
@@ -44,9 +48,9 @@ export function useLookups() {
       if (typesResult.error) throw typesResult.error
       if (placementsResult.error) throw placementsResult.error
       if (classesResult.error) throw classesResult.error
-      setTypes(typesResult.data || [])
-      setPlacements(placementsResult.data || [])
-      setClasses(classesResult.data || [])
+      setTypes(sortLookups(typesResult.data))
+      setPlacements(sortLookups(placementsResult.data))
+      setClasses(sortLookups(classesResult.data))
     } catch (err: unknown) {
       setErrorMessage(lookupErrorMessage(err, 'Chyba při načítání číselníků'))
     } finally {

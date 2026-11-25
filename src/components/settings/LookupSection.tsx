@@ -1,5 +1,18 @@
 import { useState } from 'react'
-import { Box, Button, IconButton, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  Paper,
+  Stack,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import CloseIcon from '@mui/icons-material/Close'
@@ -21,6 +34,7 @@ export function LookupSection({ title, description, table, items, onSave, onDele
   const [newName, setNewName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingName, setEditingName] = useState('')
+  const [itemToDelete, setItemToDelete] = useState<LookupOption | null>(null)
   const [busy, setBusy] = useState(false)
 
   const run = async (action: () => Promise<void>, fallback: string) => {
@@ -40,17 +54,26 @@ export function LookupSection({ title, description, table, items, onSave, onDele
       setNewName('')
     }, 'Chyba při ukládání')
 
-  const handleRename = (id: string) =>
-    run(async () => {
-      await onSave(table, editingName, id)
+  const handleRename = (item: LookupOption) => {
+    if (editingName.trim() === item.name) {
+      setEditingId(null)
+      return
+    }
+    return run(async () => {
+      await onSave(table, editingName, item.id)
       setEditingId(null)
     }, 'Chyba při ukládání')
+  }
 
-  const handleDelete = (id: string) =>
-    run(async () => {
-      await onDelete(table, id)
-      if (editingId === id) setEditingId(null)
+  const handleConfirmDelete = async () => {
+    if (!itemToDelete) return
+    const target = itemToDelete
+    await run(async () => {
+      await onDelete(table, target.id)
+      if (editingId === target.id) setEditingId(null)
     }, 'Chyba při mazání')
+    setItemToDelete(null)
+  }
 
   return (
     <Paper elevation={1} sx={{ p: 2 }}>
@@ -79,7 +102,7 @@ export function LookupSection({ title, description, table, items, onSave, onDele
             <Box
               key={item.id}
               component="form"
-              onSubmit={(e) => { e.preventDefault(); handleRename(item.id) }}
+              onSubmit={(e) => { e.preventDefault(); handleRename(item) }}
               sx={{ display: 'flex', gap: 1, alignItems: 'center', py: 0.25 }}
             >
               <TextField
@@ -90,7 +113,14 @@ export function LookupSection({ title, description, table, items, onSave, onDele
                 onChange={(e) => setEditingName(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Escape') setEditingId(null) }}
               />
-              <Button type="submit" size="small" variant="contained" disabled={busy || !editingName.trim()}>Uložit</Button>
+              <Button
+                type="submit"
+                size="small"
+                variant="contained"
+                disabled={busy || !editingName.trim() || editingName.trim() === item.name}
+              >
+                Uložit
+              </Button>
               <Tooltip title="Zrušit">
                 <IconButton size="small" onClick={() => setEditingId(null)}><CloseIcon fontSize="small" /></IconButton>
               </Tooltip>
@@ -120,7 +150,7 @@ export function LookupSection({ title, description, table, items, onSave, onDele
                 </IconButton>
               </Tooltip>
               <Tooltip title="Smazat">
-                <IconButton size="small" color="error" disabled={busy} onClick={() => handleDelete(item.id)}>
+                <IconButton size="small" color="error" disabled={busy} onClick={() => setItemToDelete(item)}>
                   <DeleteIcon fontSize="small" />
                 </IconButton>
               </Tooltip>
@@ -128,6 +158,23 @@ export function LookupSection({ title, description, table, items, onSave, onDele
           )
         )}
       </Stack>
+
+      <Dialog open={Boolean(itemToDelete)} onClose={() => !busy && setItemToDelete(null)} maxWidth="xs" fullWidth>
+        <DialogTitle>Smazat položku?</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Opravdu chcete smazat položku <strong>{itemToDelete?.name}</strong> ze sekce {title}?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setItemToDelete(null)} disabled={busy}>
+            Zrušit
+          </Button>
+          <Button onClick={handleConfirmDelete} color="error" variant="contained" disabled={busy}>
+            {busy ? 'Mažu...' : 'Smazat'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   )
 }

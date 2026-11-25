@@ -57,14 +57,14 @@ export function LoanSettingsSection({
 
   return (
     <Paper elevation={1} sx={{ px: 2.5, py: 2 }}>
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'center' } }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ alignItems: { sm: 'flex-start' } }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, pt: { sm: 0.75 } }}>
           Výpůjčky
         </Typography>
         <Box
           component="form"
           onSubmit={handleSubmit}
-          sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'center' }}
+          sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'flex-start' }}
         >
           <TextField
             size="small"
@@ -96,7 +96,13 @@ export function LoanSettingsSection({
             }}
             sx={{ width: 170 }}
           />
-          <Button type="submit" size="small" variant="contained" disabled={disabled || busy || !isValid || !isDirty}>
+          <Button
+            type="submit"
+            size="small"
+            variant="contained"
+            disabled={disabled || busy || !isValid || !isDirty}
+            sx={{ mt: 0.5 }}
+          >
             Uložit
           </Button>
         </Box>
