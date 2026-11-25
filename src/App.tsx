@@ -12,6 +12,7 @@ import { CssBaseline, ThemeProvider, createTheme } from '@mui/material'
 import { LoginForm } from './components/LoginForm'
 import { UpdatePasswordForm } from './components/UpdatePasswordForm'
 import { AppShell } from './components/AppShell'
+import type { UserRole } from './types'
 
 const theme = createTheme(
   {
@@ -45,6 +46,8 @@ export default function App() {
 
   if (loading) return <p style={{ padding: 20 }}>Ověřování přístupu...</p>
 
+  const userRole: UserRole = session?.user.app_metadata?.role === 'admin' ? 'admin' : 'teacher'
+
   return (
     <ThemeProvider theme={theme}>
       <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="cs">
@@ -54,7 +57,7 @@ export default function App() {
         ) : recoveryMode ? (
           <UpdatePasswordForm onComplete={() => setRecoveryMode(false)} />
         ) : (
-          <AppShell userEmail={session.user.email || ''} />
+          <AppShell userEmail={session.user.email || ''} userRole={userRole} />
         )}
       </LocalizationProvider>
     </ThemeProvider>

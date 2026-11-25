@@ -15,11 +15,13 @@ import { BooksTab } from './tabs/BooksTab'
 import { LoansTab } from './tabs/LoansTab'
 import { OverviewTab } from './tabs/OverviewTab'
 import { SettingsTab } from './tabs/SettingsTab'
+import type { UserRole } from '../types'
 
-const TAB_KEYS = ['prehled', 'vypujcky', 'knihy', 'nastaveni'] as const
-type TabKey = (typeof TAB_KEYS)[number]
+const ADMIN_TAB_KEYS = ['prehled', 'vypujcky', 'knihy', 'nastaveni'] as const
+const TEACHER_TAB_KEYS = ['prehled', 'vypujcky', 'knihy'] as const
+type TabKey = (typeof ADMIN_TAB_KEYS)[number]
 
-const TABS: { key: TabKey; label: string; icon: ReactElement }[] = [
+const ALL_TABS: { key: TabKey; label: string; icon: ReactElement }[] = [
   { key: 'prehled', label: 'Přehled', icon: <DashboardIcon /> },
   { key: 'vypujcky', label: 'Výpůjčky', icon: <SwapHorizIcon /> },
   { key: 'knihy', label: 'Knihy', icon: <MenuBookIcon /> },
@@ -28,10 +30,15 @@ const TABS: { key: TabKey; label: string; icon: ReactElement }[] = [
 
 interface AppShellProps {
   userEmail: string
+  userRole: UserRole
 }
 
-export function AppShell({ userEmail }: AppShellProps) {
-  const [tab, setTab] = useHashTab(TAB_KEYS, 'prehled')
+export function AppShell({ userEmail, userRole }: AppShellProps) {
+  const isAdmin = userRole === 'admin'
+  const visibleTabKeys: readonly TabKey[] = isAdmin ? ADMIN_TAB_KEYS : TEACHER_TAB_KEYS
+  const visibleTabs = isAdmin ? ALL_TABS : ALL_TABS.filter((t) => t.key !== 'nastaveni')
+  const [tab, setTab] = useHashTab(visibleTabKeys, 'prehled')
+  const activeTab: TabKey = visibleTabKeys.includes(tab) ? tab : 'prehled'
 
   return (
     <SnackbarProvider>
@@ -52,13 +59,13 @@ export function AppShell({ userEmail }: AppShellProps) {
             </Stack>
           </Toolbar>
           <Tabs
-            value={tab}
+            value={activeTab}
             onChange={(_, value: TabKey) => setTab(value)}
             variant="scrollable"
             scrollButtons="auto"
             allowScrollButtonsMobile
           >
-            {TABS.map((t) => (
+            {visibleTabs.map((t) => (
               <Tab key={t.key} value={t.key} label={t.label} icon={t.icon} iconPosition="start" sx={{ minHeight: 48 }} />
             ))}
           </Tabs>
@@ -67,10 +74,10 @@ export function AppShell({ userEmail }: AppShellProps) {
 
       <Container maxWidth="xl" sx={{ py: 4 }}>
         <Box role="tabpanel">
-          {tab === 'prehled' && <OverviewTab />}
-          {tab === 'vypujcky' && <LoansTab />}
-          {tab === 'knihy' && <BooksTab />}
-          {tab === 'nastaveni' && <SettingsTab />}
+          {activeTab === 'prehled' && <OverviewTab />}
+          {activeTab === 'vypujcky' && <LoansTab />}
+          {activeTab === 'knihy' && <BooksTab />}
+          {activeTab === 'nastaveni' && isAdmin && <SettingsTab />}
         </Box>
       </Container>
       </LibraryDataProvider>

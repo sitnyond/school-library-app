@@ -1,3 +1,5 @@
+export type UserRole = 'admin' | 'teacher'
+
 export interface LookupOption {
   id: string
   name: string
